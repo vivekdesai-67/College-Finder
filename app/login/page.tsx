@@ -31,9 +31,9 @@ export default function LoginPage() {
       if (response.ok) {
         localStorage.setItem('token', data.token);
         localStorage.setItem('user', JSON.stringify(data.user));
-        
+
         toast.success(`Welcome back, ${data.user.username}!`);
-        
+
         if (userType === 'admin') {
           router.push('/admin-dashboard');
         } else {
@@ -122,7 +122,7 @@ export default function LoginPage() {
           <TabsContent value="admin">
             <Card>
               <CardHeader>
-                <CardTitle>Admin Login</CardTitle>
+                <CardTitle>Admin Login Le ida</CardTitle>
                 <CardDescription>
                   Access the administrative dashboard
                 </CardDescription>
@@ -132,7 +132,7 @@ export default function LoginPage() {
                   <Label htmlFor="admin-username">Username</Label>
                   <Input
                     id="admin-username"
-                    placeholder="Admin username"
+                    placeholder="desai"
                     value={adminData.username}
                     onChange={(e) => setAdminData({ ...adminData, username: e.target.value })}
                   />
@@ -155,7 +155,7 @@ export default function LoginPage() {
                   onClick={() => handleLogin(adminData, 'admin')}
                   disabled={loading || !adminData.username || !adminData.password}
                 >
-                  {loading ? 'Signing in...' : 'Admin Sign In'}
+                  {loading ? 'tadako ro bhi...' : 'Admin Sign In'}
                 </Button>
               </CardContent>
             </Card>

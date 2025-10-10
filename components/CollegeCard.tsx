@@ -168,78 +168,99 @@ export default function CollegeCard({
         )}
       </CardContent> */}
       <CardContent className="space-y-3">
-        {/* Location */}
-        <div className="flex items-center text-sm text-gray-600">
-          <MapPin className="h-4 w-4 mr-2 text-gray-400" />
-          {college.location}
+  {/* Location */}
+  <div className="flex items-center text-sm text-gray-600">
+    <MapPin className="h-4 w-4 mr-2 text-gray-400" />
+    {college.location}
+  </div>
+
+  {/* Fees and Rating */}
+  <div className="flex items-center justify-between">
+    <div className="text-lg font-semibold text-green-600 flex items-center">
+      <IndianRupee className="h-5 w-5 mr-1" />
+      {formatFees(college.fees)}
+      <span className="text-gray-500 text-sm ml-1">/ year</span>
+    </div>
+    <div className="flex items-center text-gray-600">
+      <Star className="h-4 w-4 mr-1 text-yellow-400 fill-current" />
+      {college.infraRating}/5
+    </div>
+  </div>
+
+  {/* Type & Established */}
+  <div className="flex items-center justify-between text-xs text-gray-500">
+    <div className="flex items-center">
+      <Building className="h-3 w-3 mr-1" />
+      {college.type || "Private"}
+    </div>
+    {college.established && (
+      <div className="flex items-center">
+        <Calendar className="h-3 w-3 mr-1" />
+        Est. {college.established}
+      </div>
+    )}
+  </div>
+
+  {/* Description */}
+  <div className="text-xs text-gray-500 line-clamp-2">
+    {college.description ||
+      `Offering ${college.branchesOffered?.length || 0} engineering branches with excellent facilities and industry connections.`}
+  </div>
+
+  {/* Branch badges */}
+  {college.branchesOffered && college.branchesOffered.length > 0 && (
+    <div className="mt-2 grid grid-cols-1 md:grid-cols-2 gap-2 max-h-64 overflow-y-auto">
+      {college.branchesOffered.map((branch, index) => (
+        <div
+          key={index}
+          className="flex flex-col p-3 border rounded-lg hover:shadow-lg transition-all bg-gradient-to-r from-blue-50 to-indigo-50"
+        >
+          <span className="font-semibold text-gray-800 mb-2">{branch.name}</span>
+          <div className="flex flex-wrap gap-1">
+            {Object.entries(branch.cutoff).map(([category, value], i) => {
+              // Assign color based on category type
+              const color =
+                category.startsWith("1") ? "bg-blue-100 text-blue-800" :
+                category.startsWith("2") ? "bg-green-100 text-green-800" :
+                category.startsWith("3") ? "bg-purple-100 text-purple-800" :
+                category.startsWith("G") ? "bg-pink-100 text-pink-800" :
+                category.startsWith("N") ? "bg-yellow-100 text-yellow-800" :
+                category.startsWith("O") ? "bg-orange-100 text-orange-800" :
+                category.startsWith("S") ? "bg-red-100 text-red-800" :
+                "bg-gray-100 text-gray-800";
+
+              return (
+                <span
+                  key={i}
+                  className={`text-xs font-medium px-2 py-0.5 rounded ${color}`}
+                  title={`${category}: ${value}`}
+                >
+                  {category}: {value}
+                </span>
+              );
+            })}
+          </div>
         </div>
+      ))}
+    </div>
+  )}
 
-        {/* Fees and Rating */}
-        <div className="flex items-center justify-between">
-          <div className="text-lg font-semibold text-green-600 flex items-center">
-            <IndianRupee className="h-5 w-5 mr-1" />
-            {formatFees(college.fees)} <span className="text-gray-500 text-sm ml-1">/ year</span>
-          </div>
-          <div className="flex items-center text-gray-600">
-            <Star className="h-4 w-4 mr-1 text-yellow-400 fill-current" />
-            {college.infraRating}/5
-          </div>
-        </div>
+  {/* Actions */}
+  {showActions && (
+    <div className="pt-2">
+      <Button
+        variant="outline"
+        size="sm"
+        className="w-full group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all"
+        onClick={() => router.push(`/college/${college._id}`)}
+      >
+        <ExternalLink className="h-4 w-4 mr-2" />
+        View Details
+      </Button>
+    </div>
+  )}
+</CardContent>
 
-        {/* Type & Established */}
-        <div className="flex items-center justify-between text-xs text-gray-500">
-          <div className="flex items-center">
-            <Building className="h-3 w-3 mr-1" />
-            {college.type || "Private"}
-          </div>
-          {college.established && (
-            <div className="flex items-center">
-              <Calendar className="h-3 w-3 mr-1" />
-              Est. {college.established}
-            </div>
-          )}
-        </div>
-
-        {/* Description */}
-        <div className="text-xs text-gray-500 line-clamp-2">
-          {college.description ||
-            `Offering ${college.branchesOffered?.length || 0} engineering branches with excellent facilities and industry connections.`}
-        </div>
-
-        {/* Branch badges */}
-        {college.branchesOffered && college.branchesOffered.length > 0 && (
-          <div className="mt-2 space-y-1">
-            {college.branchesOffered.map((branch, index) => (
-              <div key={index} className="flex items-center justify-between p-2 border rounded-md hover:shadow-lg transition-all bg-gray-50">
-                <span className="font-medium text-gray-700">{branch.name}</span>
-                <div className="flex flex-col items-end text-xs">
-                  <span className="text-blue-600 font-semibold">
-                    Gen: {branch.cutoff.general} | OBC: {branch.cutoff.obc}
-                  </span>
-                  <span className="text-purple-600 font-semibold">
-                    SC: {branch.cutoff.sc} | ST: {branch.cutoff.st}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
-
-        {/* Actions */}
-        {showActions && (
-          <div className="pt-2">
-            <Button
-              variant="outline"
-              size="sm"
-              className="w-full group-hover:bg-blue-600 group-hover:text-white group-hover:border-blue-600 transition-all"
-              onClick={() => router.push(`/college/${college._id}`)}
-            >
-              <ExternalLink className="h-4 w-4 mr-2" />
-              View Details
-            </Button>
-          </div>
-        )}
-      </CardContent>
 
     </Card>
   );

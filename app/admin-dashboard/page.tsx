@@ -1,4 +1,4 @@
- 'use client';
+'use client';
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
@@ -289,83 +289,91 @@ export default function AdminDashboardPage() {
 
   // -------------------- RETURN JSX --------------------
   return (
-    <div className="container mx-auto px-4 py-8">
+    <div className="container mx-auto px-4 py-8 space-y-8">
       {/* Welcome */}
       <div className="mb-8">
-        <h1 className="text-3xl font-bold text-gray-900 mb-2">
-          Welcome, {user?.username} (Admin)
+        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+          Welcome, <span className="text-blue-600">{user?.username}</span> (Admin)
         </h1>
         <p className="text-gray-600">Manage colleges, users, and website performance.</p>
       </div>
 
       {/* Stats Section */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Users className="h-5 w-5 text-blue-600" />
-              <span>Total Users</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.totalUsers}</p>
-            <p className="text-sm text-gray-600">Active users on platform</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <Activity className="h-5 w-5 text-green-600" />
-              <span>New Users</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-3xl font-bold">{stats.newUsers}</p>
-            <p className="text-sm text-gray-600">Joined this month</p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center space-x-2">
-              <BarChart3 className="h-5 w-5 text-orange-600" />
-              <span>Website Performance</span>
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-lg">Uptime: {stats.performance.uptime}%</p>
-            <p className="text-lg">Response: {stats.performance.responseTime}ms</p>
-          </CardContent>
-        </Card>
+        {[
+          {
+            icon: <Users className="h-5 w-5 text-blue-600" />,
+            title: "Total Users",
+            value: stats.totalUsers,
+            subtitle: "Active users on platform",
+            gradient: "from-blue-100 to-blue-200",
+          },
+          {
+            icon: <Activity className="h-5 w-5 text-green-600" />,
+            title: "New Users",
+            value: stats.newUsers,
+            subtitle: "Joined this month",
+            gradient: "from-green-100 to-green-200",
+          },
+          {
+            icon: <BarChart3 className="h-5 w-5 text-orange-600" />,
+            title: "Website Performance",
+            value: `Uptime: ${stats.performance.uptime}% | Response: ${stats.performance.responseTime}ms`,
+            gradient: "from-orange-100 to-orange-200",
+          },
+        ].map((stat, idx) => (
+          <Card key={idx} className={`p-4 shadow-lg rounded-xl bg-gradient-to-r ${stat.gradient} hover:shadow-2xl transition`}>
+            <CardHeader>
+              <CardTitle className="flex items-center space-x-2 text-gray-800">
+                {stat.icon} <span>{stat.title}</span>
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <p className="text-2xl md:text-3xl font-bold">{stat.value}</p>
+              {stat.subtitle && <p className="text-sm text-gray-700">{stat.subtitle}</p>}
+            </CardContent>
+          </Card>
+        ))}
       </div>
 
       {/* Pie Chart */}
-      <Card className="mb-8">
+      <Card className="mb-8 shadow-lg rounded-xl hover:shadow-2xl transition">
         <CardHeader>
-          <CardTitle>User Distribution</CardTitle>
-          <CardDescription>Breakdown of new vs existing users</CardDescription>
+          <CardTitle className="text-indigo-800 font-bold">User Distribution</CardTitle>
+          <CardDescription className="text-gray-600">Breakdown of new vs existing users</CardDescription>
         </CardHeader>
-        <CardContent className="h-72">
-          <ResponsiveContainer>
+        <CardContent className="h-72 flex justify-center items-center">
+          <ResponsiveContainer width="100%" height="100%">
             <PieChart>
-              <Pie data={pieData} dataKey="value" cx="50%" cy="50%" outerRadius={100} label>
+              <Pie
+                data={pieData}
+                dataKey="value"
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                innerRadius={40}
+                label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
+              >
                 {pieData.map((entry, index) => (
                   <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                 ))}
               </Pie>
-              <Tooltip />
-              <Legend />
+              <Tooltip
+                formatter={(value: number, name: string) => [`${value}`, name]}
+                contentStyle={{ backgroundColor: '#f3f4f6', borderRadius: '8px', border: 'none' }}
+              />
+              <Legend verticalAlign="bottom" height={36} />
             </PieChart>
           </ResponsiveContainer>
         </CardContent>
       </Card>
 
-      {/* Add College */}
-      <Card className="mb-8">
+
+      {/* Add College Form */}
+      <Card className="mb-8 shadow-lg rounded-xl hover:shadow-2xl transition">
         <CardHeader>
-          <CardTitle className="flex items-center space-x-2">
-            <PlusCircle className="h-5 w-5 text-purple-600" />
+          <CardTitle className="flex items-center space-x-2 text-purple-600">
+            <PlusCircle className="h-5 w-5" />
             <span>Add New College</span>
           </CardTitle>
           <CardDescription>Fill details to add a new college</CardDescription>
@@ -373,263 +381,169 @@ export default function AdminDashboardPage() {
         <CardContent>
           <form onSubmit={handleAddCollege} className="space-y-6">
             <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <InputField
-                label="College Name"
-                value={newCollege.name}
-                onChange={(v) => setNewCollege({ ...newCollege, name: v })}
-                required
-              />
-              <InputField
-                label="Location"
-                value={newCollege.location}
-                onChange={(v) => setNewCollege({ ...newCollege, location: v })}
-                required
-              />
-              <SelectField
-                label="Type"
-                value={newCollege.type}
-                options={['Private', 'Government', 'Autonomous']}
-                onChange={(v) => setNewCollege({ ...newCollege, type: v as College['type'] })}
-              />
-              <InputField
-                label="Established Year"
-                type="number"
-                value={newCollege.established}
-                onChange={(v) =>
-                  setNewCollege({ ...newCollege, established: v === '' ? '' : Number(v) })
-                }
-              />
-              <InputField
-                label="Fees"
-                type="number"
-                value={newCollege.fees}
-                onChange={(v) =>
-                  setNewCollege({ ...newCollege, fees: v === '' ? '' : Number(v) })
-                }
-              />
-              <InputField
-                label="Infrastructure Rating"
-                type="number"
-                min={1}
-                max={5}
-                value={newCollege.infraRating}
-                onChange={(v) =>
-                  setNewCollege({ ...newCollege, infraRating: v === '' ? '' : Number(v) })
-                }
-              />
-              <InputField
-                label="Accreditation"
-                value={newCollege.accreditation}
-                onChange={(v) => setNewCollege({ ...newCollege, accreditation: v })}
-              />
-              <InputField
-                label="Image URL"
-                value={newCollege.image}
-                onChange={(v) => setNewCollege({ ...newCollege, image: v })}
-              />
-              <InputField
-                label="Description"
-                value={newCollege.description}
-                onChange={(v) => setNewCollege({ ...newCollege, description: v })}
-              />
+              {/* College Fields */}
+              <InputField label="College Name" value={newCollege.name} onChange={(v) => setNewCollege({ ...newCollege, name: v })} required />
+              <InputField label="Location" value={newCollege.location} onChange={(v) => setNewCollege({ ...newCollege, location: v })} required />
+              <SelectField label="Type" value={newCollege.type} options={['Private', 'Government', 'Autonomous']} onChange={(v) => setNewCollege({ ...newCollege, type: v as College['type'] })} />
+              <InputField label="Established Year" type="number" value={newCollege.established} onChange={(v) => setNewCollege({ ...newCollege, established: v === '' ? '' : Number(v) })} />
+              <InputField label="Fees" type="number" value={newCollege.fees} onChange={(v) => setNewCollege({ ...newCollege, fees: v === '' ? '' : Number(v) })} />
+              <InputField label="Infrastructure Rating" type="number" min={1} max={5} value={newCollege.infraRating} onChange={(v) => setNewCollege({ ...newCollege, infraRating: v === '' ? '' : Number(v) })} />
+              <InputField label="Accreditation" value={newCollege.accreditation} onChange={(v) => setNewCollege({ ...newCollege, accreditation: v })} />
+              <InputField label="Image URL" value={newCollege.image} onChange={(v) => setNewCollege({ ...newCollege, image: v })} />
+              <InputField label="Description" value={newCollege.description} onChange={(v) => setNewCollege({ ...newCollege, description: v })} />
             </div>
 
             {/* Branches Section */}
             <div className="space-y-2">
-              <p className="font-semibold">Branches Offered</p>
+              <p className="font-semibold text-gray-700">Branches Offered</p>
               <div className="space-y-4 max-h-96 overflow-y-auto border rounded p-2">
                 {newCollege.branchesOffered?.map((branch, idx) => (
-                  <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-3 border-b pb-2">
-                    <InputField
-                      label="Name"
-                      value={branch.name}
-                      onChange={(v) => updateBranch(idx, 'name', v)}
-                    />
-                    <InputField
-                      label="Placement Rate"
-                      type="number"
-                      value={branch.placementRate}
-                      onChange={(v) => updateBranch(idx, 'placementRate', Number(v))}
-                    />
-                    <InputField
-                      label="Avg Salary"
-                      type="number"
-                      value={branch.avgSalary}
-                      onChange={(v) => updateBranch(idx, 'avgSalary', Number(v))}
-                    />
-                    <InputField
-                      label="Max Salary"
-                      type="number"
-                      value={branch.maxSalary}
-                      onChange={(v) => updateBranch(idx, 'maxSalary', Number(v))}
-                    />
-                    <InputField
-                      label="Cutoff Gen"
-                      type="number"
-                      value={branch.cutoff.general}
-                      onChange={(v) => updateBranchCutoff(idx, 'general', Number(v))}
-                    />
-                    <InputField
-                      label="Cutoff OBC"
-                      type="number"
-                      value={branch.cutoff.obc}
-                      onChange={(v) => updateBranchCutoff(idx, 'obc', Number(v))}
-                    />
-                    <InputField
-                      label="Cutoff SC"
-                      type="number"
-                      value={branch.cutoff.sc}
-                      onChange={(v) => updateBranchCutoff(idx, 'sc', Number(v))}
-                    />
-                    <InputField
-                      label="Cutoff ST"
-                      type="number"
-                      value={branch.cutoff.st}
-                      onChange={(v) => updateBranchCutoff(idx, 'st', Number(v))}
-                    />
-                    <InputField
-                      label="Admission Trend"
-                      type="number"
-                      value={branch.admissionTrend}
-                      onChange={(v) => updateBranch(idx, 'admissionTrend', Number(v))}
-                    />
-                    <InputField
-                      label="Industry Growth"
-                      type="number"
-                      value={branch.industryGrowth}
-                      onChange={(v) => updateBranch(idx, 'industryGrowth', Number(v))}
-                    />
+                  <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-3 border-b pb-2 hover:bg-gray-50 rounded transition">
+                    <InputField label="Name" value={branch.name} onChange={(v) => updateBranch(idx, 'name', v)} />
+                    <InputField label="Placement Rate" type="number" value={branch.placementRate} onChange={(v) => updateBranch(idx, 'placementRate', Number(v))} />
+                    <InputField label="Avg Salary" type="number" value={branch.avgSalary} onChange={(v) => updateBranch(idx, 'avgSalary', Number(v))} />
+                    <InputField label="Max Salary" type="number" value={branch.maxSalary} onChange={(v) => updateBranch(idx, 'maxSalary', Number(v))} />
+                    <InputField label="Cutoff Gen" type="number" value={branch.cutoff.general} onChange={(v) => updateBranchCutoff(idx, 'general', Number(v))} />
+                    <InputField label="Cutoff OBC" type="number" value={branch.cutoff.obc} onChange={(v) => updateBranchCutoff(idx, 'obc', Number(v))} />
+                    <InputField label="Cutoff SC" type="number" value={branch.cutoff.sc} onChange={(v) => updateBranchCutoff(idx, 'sc', Number(v))} />
+                    <InputField label="Cutoff ST" type="number" value={branch.cutoff.st} onChange={(v) => updateBranchCutoff(idx, 'st', Number(v))} />
+                    <InputField label="Admission Trend" type="number" value={branch.admissionTrend} onChange={(v) => updateBranch(idx, 'admissionTrend', Number(v))} />
+                    <InputField label="Industry Growth" type="number" value={branch.industryGrowth} onChange={(v) => updateBranch(idx, 'industryGrowth', Number(v))} />
                     <div className="flex items-center space-x-2">
                       <Label>Is Booming?</Label>
-                      <input
-                        type="checkbox"
-                        checked={branch.isBooming}
-                        onChange={(e) => updateBranch(idx, 'isBooming', e.target.checked)}
-                      />
+                      <input type="checkbox" checked={branch.isBooming} onChange={(e) => updateBranch(idx, 'isBooming', e.target.checked)} />
                     </div>
-                    <Button type="button" variant="destructive" onClick={() => removeBranch(idx)}>
-                      Remove Branch
-                    </Button>
+                    <Button type="button" variant="destructive" onClick={() => removeBranch(idx)}>Remove Branch</Button>
                   </div>
                 ))}
               </div>
-              <Button type="button" onClick={addBranch}>
-                + Add Branch
-              </Button>
+              <Button type="button" onClick={addBranch}>+ Add Branch</Button>
             </div>
 
-            <Button type="submit" className="w-full mt-4">
+            <Button type="submit" className="w-full mt-4 bg-gradient-to-r from-purple-500 to-indigo-500 text-white hover:from-purple-600 hover:to-indigo-600">
               Add College
             </Button>
           </form>
         </CardContent>
       </Card>
 
-      {/* Colleges List & Students Management */}
-      {/* ... same JSX as your original code for displaying colleges & students ... */}
-      {/* List Colleges */}
-            <Card className="mb-8">
-                <CardHeader>
-                    <CardTitle>Colleges List</CardTitle>
-                    <CardDescription>Currently added colleges</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    {/* <ul className="space-y-2">
-                        {colleges.map((c) => (
-                            <li key={c._id} className="flex justify-between items-center border-b pb-2">
-                                <span>{c.name} - <span className="text-gray-500">{c.location}</span></span>
-                                <Badge variant="secondary">Active</Badge>
-                            </li>
+      {/* Students Management */}
+      <Card className="shadow-lg rounded-xl hover:shadow-2xl transition">
+        <CardHeader>
+          <CardTitle className="text-indigo-700">Students Management</CardTitle>
+          <CardDescription className="text-indigo-500">Manage registered students</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <ul className="space-y-3">
+            {students.map((s, idx) => (
+              <li
+                key={s._id}
+                className={`flex justify-between items-center border-l-4 border-purple-300 pl-4 py-2 rounded-lg transition hover:bg-gradient-to-r ${idx % 2 === 0 ? 'from-purple-50 via-pink-50 to-yellow-50' : 'from-green-50 via-blue-50 to-indigo-50'
+                  }`}
+              >
+                <div>
+                  <p className="font-semibold text-purple-700">{s.username} <span className="text-gray-500">({s.email})</span></p>
+                  <p className="text-sm">
+                    <span className="text-blue-600 font-medium">Rank:</span> {s.rank || 'N/A'} |
+                    <span className="text-green-600 font-medium ml-2">Category:</span> {s.category}
+                  </p>
+                </div>
+                <div className="flex space-x-2">
+                  {s.profileComplete ? (
+                    <Badge className="bg-green-100 text-green-700">Complete</Badge>
+                  ) : (
+                    <Button size="sm" className="bg-yellow-100 text-yellow-700 hover:bg-yellow-200" onClick={() => handleMarkComplete(s._id)}>
+                      <UserCheck className="h-4 w-4 mr-1" /> Mark Complete
+                    </Button>
+                  )}
+                  <Button size="sm" variant="destructive" className="bg-red-100 text-red-700 hover:bg-red-200" onClick={() => handleDeleteStudent(s._id)}>
+                    <Trash2 className="h-4 w-4 mr-1" /> Delete
+                  </Button>
+                </div>
+              </li>
+            ))}
+          </ul>
+        </CardContent>
+      </Card>
+
+
+      {/* Colleges List */}
+      <Card className="mb-8 shadow-2xl rounded-xl hover:shadow-3xl transition">
+        <CardHeader>
+          <CardTitle className="text-purple-700">Colleges List</CardTitle>
+          <CardDescription className="text-purple-500">Currently added colleges</CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {colleges.map((college) => (
+            <Card
+              key={college._id}
+              className="shadow-md rounded-xl hover:shadow-xl transition transform hover:-translate-y-1 bg-gradient-to-r from-indigo-50 via-pink-50 to-yellow-50"
+            >
+              <CardHeader>
+                <CardTitle className="text-xl text-indigo-700">{college.name}</CardTitle>
+                <CardDescription className="text-indigo-500">{college.description}</CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex flex-col md:flex-row gap-6">
+                  {/* College Image */}
+                  <img
+                    src={college.image}
+                    alt={college.name}
+                    className="w-full md:w-1/3 h-48 object-cover rounded-lg border-2 border-indigo-200"
+                  />
+
+                  {/* College Details */}
+                  <div className="flex-1 space-y-2">
+                    <p><span className="font-semibold text-purple-600">Location:</span> {college.location}</p>
+                    <p><span className="font-semibold text-purple-600">Type:</span> {college.type}</p>
+                    <p><span className="font-semibold text-purple-600">Established:</span> {college.established}</p>
+                    <p><span className="font-semibold text-purple-600">Fees:</span> ₹{college.fees.toLocaleString()}</p>
+                    <p><span className="font-semibold text-purple-600">Accreditation:</span> {college.accreditation}</p>
+                    <p><span className="font-semibold text-purple-600">Infra Rating:</span> {college.infraRating}/5</p>
+
+                    {/* Branches */}
+                    <div className="mt-2">
+                      <p className="font-semibold text-indigo-700 mb-1">Branches Offered:</p>
+                      <ul className="ml-4 space-y-2">
+                        {college.branchesOffered.map((branch) => (
+                          <li
+                            key={branch._id}
+                            className="border-l-4 border-purple-300 pl-2 pb-1 hover:bg-purple-50 rounded transition"
+                          >
+                            <p className="font-medium text-pink-600">{branch.name}</p>
+                            <p className="text-sm text-green-700">
+                              Placement Rate: <span className="font-semibold">{(branch.placementRate * 100).toFixed(1)}%</span> |
+                              Avg Salary: <span className="font-semibold text-blue-600">₹{branch.avgSalary.toLocaleString()}</span> |
+                              Max Salary: <span className="font-semibold text-blue-800">₹{branch.maxSalary.toLocaleString()}</span>
+                            </p>
+                            <p className="text-sm">
+                              Cutoff:
+                              <span className="bg-blue-100 text-blue-700 px-1 rounded ml-1">Gen {branch.cutoff.general}</span>
+                              <span className="bg-green-100 text-green-700 px-1 rounded ml-1">OBC {branch.cutoff.obc}</span>
+                              <span className="bg-yellow-100 text-yellow-700 px-1 rounded ml-1">SC {branch.cutoff.sc}</span>
+                              <span className="bg-red-100 text-red-700 px-1 rounded ml-1">ST {branch.cutoff.st}</span>
+                            </p>
+                            <p className="text-sm text-purple-700">
+                              Admission Trend: {(branch.admissionTrend * 100).toFixed(1)}% |
+                              Industry Growth: {(branch.industryGrowth * 100).toFixed(1)}% |
+                              {branch.isBooming && <span className="text-orange-500 font-bold">Booming 🚀</span>}
+                            </p>
+                          </li>
                         ))}
-                    </ul> */}
-                    {colleges.map((college) => (
-                        <Card key={college._id} className="mb-8">
-                            <CardHeader>
-                                <CardTitle>{college.name}</CardTitle>
-                                <CardDescription>{college.description}</CardDescription>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex flex-col md:flex-row gap-6">
-                                    {/* College Image */}
-                                    <img
-                                        src={college.image}
-                                        alt={college.name}
-                                        className="w-full md:w-1/3 h-48 object-cover rounded"
-                                    />
-
-                                    {/* College Details */}
-                                    <div className="flex-1 space-y-2">
-                                        <p><span className="font-semibold">Location:</span> {college.location}</p>
-                                        <p><span className="font-semibold">Type:</span> {college.type}</p>
-                                        <p><span className="font-semibold">Established:</span> {college.established}</p>
-                                        <p><span className="font-semibold">Fees:</span> ₹{college.fees.toLocaleString()}</p>
-                                        <p><span className="font-semibold">Accreditation:</span> {college.accreditation}</p>
-                                        <p><span className="font-semibold">Infrastructure Rating:</span> {college.infraRating}/5</p>
-
-                                        {/* Branches */}
-                                        <div>
-                                            <p className="font-semibold">Branches Offered:</p>
-                                            <ul className="ml-4 space-y-1">
-                                                {college.branchesOffered.map((branch) => (
-                                                    <li key={branch._id} className="border-b pb-1">
-                                                        <p className="font-medium">{branch.name}</p>
-                                                        <p className="text-sm text-gray-600">
-                                                            Placement Rate: {branch.placementRate * 100}% | Avg Salary: ₹{branch.avgSalary.toLocaleString()} | Max Salary: ₹{branch.maxSalary.toLocaleString()}
-                                                        </p>
-                                                        <p className="text-sm text-gray-600">
-                                                            Cutoff: Gen {branch.cutoff.general}, OBC {branch.cutoff.obc}, SC {branch.cutoff.sc}, ST {branch.cutoff.st}
-                                                        </p>
-                                                        <p className="text-sm text-gray-600">
-                                                            Admission Trend: {(branch.admissionTrend * 100).toFixed(1)}% | Industry Growth: {(branch.industryGrowth * 100).toFixed(1)}% | {branch.isBooming ? 'Booming 🚀' : ''}
-                                                        </p>
-                                                    </li>
-                                                ))}
-                                            </ul>
-                                        </div>
-                                    </div>
-                                </div>
-                            </CardContent>
-                        </Card>
-                    ))}
-
-                </CardContent>
+                      </ul>
+                    </div>
+                  </div>
+                </div>
+              </CardContent>
             </Card>
+          ))}
+        </CardContent>
+      </Card>
 
-            {/* Students Management */}
-            <Card>
-                <CardHeader>
-                    <CardTitle>Students Management</CardTitle>
-                    <CardDescription>Manage registered students</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <ul className="space-y-3">
-                        {students.map((s) => (
-                            <li key={s._id} className="flex justify-between items-center border-b pb-2">
-                                <div>
-                                    <p className="font-semibold">{s.username} ({s.email})</p>
-                                    <p className="text-sm text-gray-500">
-                                        Rank: {s.rank || 'N/A'} | Category: {s.category}
-                                    </p>
-                                </div>
-                                <div className="flex space-x-2">
-                                    {s.profileComplete ? (
-                                        <Badge className="bg-green-100 text-green-700">Complete</Badge>
-                                    ) : (
-                                        <Button size="sm" onClick={() => handleMarkComplete(s._id)}>
-                                            <UserCheck className="h-4 w-4 mr-1" /> Mark Complete
-                                        </Button>
-                                    )}
-                                    <Button size="sm" variant="destructive" onClick={() => handleDeleteStudent(s._id)}>
-                                        <Trash2 className="h-4 w-4 mr-1" /> Delete
-                                    </Button>
-                                </div>
-                            </li>
-                        ))}
-                    </ul>
-                </CardContent>
-            </Card>
+
+
     </div>
+
   );
 }
 
- 

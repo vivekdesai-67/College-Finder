@@ -100,6 +100,7 @@ export async function GET(request: NextRequest) {
     sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
     const colleges = await College.find(query).sort(sortObj);
+    // console.log(colleges);
     return NextResponse.json(colleges);
   } catch (error) {
     console.error('Colleges fetch error:', error);
