@@ -734,63 +734,6 @@ export default function DashboardPage() {
                 </select>
               </div>
 
-              {/* Multi-Select Branch */}
-              {/* <div className="space-y-2">
-                <Label>Preferred Branches</Label>
-                <Popover>
-                  <PopoverTrigger asChild>
-                    <Button
-                      variant="outline"
-                      className="w-full justify-between"
-                    >
-                      {profileForm.preferredBranch.length > 0
-                        ? profileForm.preferredBranch.join(', ')
-                        : 'Select branches'}
-                      <ChevronsUpDown className="h-4 w-4 opacity-50" />
-                    </Button>
-                  </PopoverTrigger>
-                  <PopoverContent className="w-full p-0">
-                    <Command>
-                      <CommandInput placeholder="Search branch..." />
-                      <CommandEmpty>No branch found.</CommandEmpty>
-                      <CommandGroup>
-                        {branches.map((branch) => {
-                          const selected = profileForm.preferredBranch.includes(branch);
-                          return (
-                            <CommandItem
-                              key={branch}
-                              onSelect={() => {
-                                const newSelection = selected
-                                  ? profileForm.preferredBranch.filter((b) => b !== branch)
-                                  : [...profileForm.preferredBranch, branch];
-                                setProfileForm({
-                                  ...profileForm,
-                                  preferredBranch: newSelection,
-                                });
-                              }}
-                            >
-                              <Check
-                                className={cn(
-                                  'mr-2 h-4 w-4',
-                                  selected ? 'opacity-100' : 'opacity-0'
-                                )}
-                              />
-                              {branch}
-                            </CommandItem>
-                          );
-                        })}
-                      </CommandGroup>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
-                <div className="flex flex-wrap gap-2 mt-2">
-                  {profileForm.preferredBranch.map((branch) => (
-                    <Badge key={branch} variant="secondary">
-                      {branch}
-                    </Badge>
-                  ))}
-                </div>
-              </div> */}
               <div className="space-y-3">
                 <Label>Preferred Branches</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -841,16 +784,394 @@ export default function DashboardPage() {
     );
 
   // MAIN DASHBOARD VIEW
+  // return (
+  //   <div className="container mx-auto px-4 py-8 space-y-8">
+  //     <div>
+  //       <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+  //         Welcome back, <span className="text-blue-600">{user?.username}</span>!
+  //       </h1>
+  //       <p className="text-gray-600 text-lg">
+  //         Here are your personalized college recommendations based on your profile.
+  //       </p>
+  //     </div>
+
+  //     {/* Profile Card */}
+  //     {profile && (
+  //       <Card className="shadow-lg rounded-xl hover:shadow-2xl transition">
+  //         <CardHeader>
+  //           <CardTitle className="flex items-center gap-2 text-blue-700">
+  //             <Target className="h-5 w-5" /> Your Profile
+  //           </CardTitle>
+  //         </CardHeader>
+  //         <CardContent>
+  //           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+  //             <div className="p-4 bg-blue-100 rounded-lg text-center">
+  //               <div className="text-2xl font-bold text-blue-700">{profile.rank}</div>
+  //               <div className="text-sm text-gray-600">CET Rank</div>
+  //             </div>
+  //             <div className="p-4 bg-green-100 rounded-lg text-center">
+  //               <div className="text-lg font-semibold text-green-700">{profile.category}</div>
+  //               <div className="text-sm text-gray-600">Category</div>
+  //             </div>
+  //             <div className="p-4 bg-purple-100 rounded-lg text-center">
+  //               <div className="text-sm font-medium text-purple-700">
+  //                 {Array.isArray(profile.preferredBranch)
+  //                   ? profile.preferredBranch.join(', ')
+  //                   : profile.preferredBranch}
+  //               </div>
+  //               <div className="text-sm text-gray-600">Preferred Branch</div>
+  //             </div>
+  //           </div>
+  //           <div className="mt-4 text-center">
+  //             <Button variant="outline" onClick={() => setShowProfileForm(true)}>
+  //               <Settings className="h-4 w-4 mr-1" /> Edit Profile
+  //             </Button>
+  //           </div>
+  //         </CardContent>
+  //       </Card>
+  //     )}
+
+  //     {/* Trending Branches */}
+  //     {trendingBranches.length > 0 && (
+  //       <Card className="shadow-lg rounded-xl">
+  //         <CardHeader>
+  //           <CardTitle className="flex items-center gap-2 text-orange-600">
+  //             <TrendingUp className="h-5 w-5" /> Trending Branches
+  //           </CardTitle>
+  //           <CardDescription>
+  //             Most popular engineering branches based on demand
+  //           </CardDescription>
+  //         </CardHeader>
+  //         <CardContent>
+  //           <div className="flex flex-wrap gap-3">
+  //             {trendingBranches.map((b, i) => (
+  //               <Badge key={i} className="px-3 py-1 text-sm bg-orange-100 text-orange-800">
+  //                 <TrendingUp className="h-3 w-3 mr-1" /> {b.name} ({Math.round(b.avgBoomFlag * 100)}%)
+  //               </Badge>
+  //             ))}
+  //           </div>
+  //         </CardContent>
+  //       </Card>
+  //     )}
+
+  //     {/* Recommendations */}
+  //     <div>
+  //       <div className="flex items-center gap-2 mb-6">
+  //         <BookOpen className="h-6 w-6 text-blue-600" />
+  //         <h2 className="text-2xl font-bold text-gray-900">Your College Recommendations</h2>
+  //       </div>
+
+  //       {recommendations.length > 0 ? (
+  //         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+  //           {recommendations.slice(0, 9).map((rec, i) => (
+  //             <CollegeCard
+  //               key={`${rec.college._id}-${i}`}
+  //               college={rec.college}
+  //               eligibilityScore={rec.eligibilityScore}
+  //               recommendedBranch={rec.branch.name}
+  //               onWishlistToggle={() => handleWishlistToggle(rec.college._id)}
+  //               isInWishlist={wishlistSet.has(rec.college._id)}
+  //             />
+  //           ))}
+  //         </div>
+  //       ) : (
+  //         <Card className="shadow-lg rounded-xl text-center py-12">
+  //           <CardContent>
+  //             <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+  //             <h3 className="text-lg font-semibold text-gray-900 mb-2">
+  //               No Recommendations Yet
+  //             </h3>
+  //             <p className="text-gray-600 mb-4">
+  //               Complete your profile to get personalized recommendations.
+  //             </p>
+  //             <Button onClick={() => setShowProfileForm(true)}>Complete Profile</Button>
+  //           </CardContent>
+  //         </Card>
+  //       )}
+  //     </div>
+
+  //     {recommendations.length > 9 && (
+  //       <div className="text-center">
+  //         <Button variant="outline" onClick={() => router.push('/explore')}>
+  //           View All Recommendations
+  //         </Button>
+  //       </div>
+  //     )}
+  //   </div>
+  // );
+  // DASHBOARD VIEW WITH ENGINEERING EXPLORER
   return (
-    <div className="container mx-auto px-4 py-8 space-y-8">
-      <div>
-        <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
-          Welcome back, <span className="text-blue-600">{user?.username}</span>!
-        </h1>
-        <p className="text-gray-600 text-lg">
-          Here are your personalized college recommendations based on your profile.
-        </p>
+    <div className="container mx-auto px-4 py-8 space-y-10">
+      {/* Welcome Section */}
+      {/* <div>
+      <h1 className="text-3xl md:text-4xl font-bold text-gray-900 mb-2">
+        Welcome back, <span className="text-blue-600">{user?.username}</span>!
+      </h1>
+      <p className="text-gray-600 text-lg">
+        Here are your personalized college recommendations based on your profile.
+      </p>
+    </div> */}
+      <div className="relative bg-gradient-to-r from-blue-50 via-indigo-100 to-purple-50 p-6 md:p-10 rounded-2xl shadow-xl overflow-hidden">
+        {/* Decorative gradient circles */}
+        <div className="absolute top-0 left-0 w-40 h-40 bg-blue-400 opacity-20 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-52 h-52 bg-purple-400 opacity-20 rounded-full blur-3xl"></div>
+
+        <div className="relative z-10 text-center">
+          <h1 className="text-4xl md:text-5xl font-extrabold bg-gradient-to-r from-blue-700 via-indigo-600 to-purple-700 bg-clip-text text-transparent mb-4 animate-fadeIn">
+            Welcome back, <span className="text-pink-600">{user?.username}</span>! 🎓
+          </h1>
+          <p className="text-gray-700 text-lg md:text-xl max-w-2xl mx-auto leading-relaxed mb-6">
+            Here are your <span className="font-semibold text-indigo-600">personalized college recommendations </span>
+            and trending engineering branches designed to match your goals and CET rank.
+          </p>
+
+          <div className="mt-8 flex flex-col md:flex-row justify-center gap-6">
+            <button className="px-6 py-3 rounded-xl text-white font-semibold bg-gradient-to-r from-blue-600 to-indigo-700 hover:from-indigo-700 hover:to-blue-600 shadow-lg transform hover:scale-105 transition">
+              🎯 View Top Colleges
+            </button>
+            <button className="px-6 py-3 rounded-xl text-white font-semibold bg-gradient-to-r from-pink-500 to-purple-600 hover:from-purple-600 hover:to-pink-500 shadow-lg transform hover:scale-105 transition">
+              🌱 Explore Engineering Branches
+            </button>
+          </div>
+        </div>
       </div>
+
+
+      {/* 🌐 Explore Engineering Deep Section */}
+      {/* <section className="bg-gradient-to-r from-blue-50 via-indigo-50 to-purple-50 rounded-3xl p-8 shadow-lg space-y-8">
+        <h2 className="text-3xl font-bold text-center text-indigo-700">
+          🌟 Explore Engineering in Depth
+        </h2>
+        <p className="text-center text-gray-700 max-w-2xl mx-auto">
+          Learn how different engineering branches shape the future and find which path aligns with your passion.
+        </p>
+
+        <div className="bg-white rounded-2xl p-6 shadow-inner">
+          <h3 className="text-2xl font-semibold text-blue-700 mb-3">What is Engineering?</h3>
+          <p className="text-gray-700 leading-relaxed">
+            Engineering is the art of applying science, mathematics, and creativity to design solutions for real-world problems. From building cities to writing code for AI, engineers make ideas come alive. Every branch focuses on transforming ideas into innovation — making the world smarter, safer, and better.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {[
+            {
+              name: "Computer Science & Engineering",
+              color: "from-blue-500 to-indigo-600",
+              desc: "Software, Algorithms, Data, and AI",
+              details: "Focuses on computing systems, algorithms, and intelligent technologies. Prepares you for careers in AI, Cybersecurity, App Development, and Cloud Engineering."
+            },
+            {
+              name: "Mechanical Engineering",
+              color: "from-yellow-400 to-orange-500",
+              desc: "Machines, Design, and Robotics",
+              details: "Learn how to design, build, and automate machines. Future scope includes EVs, Robotics, Renewable Energy, and Space Mechanisms."
+            },
+            {
+              name: "Civil Engineering",
+              color: "from-teal-500 to-cyan-600",
+              desc: "Infrastructure, Smart Cities, Sustainability",
+              details: "Responsible for constructing buildings, bridges, and urban infrastructure. Opportunities in Smart Cities, Construction Management, and Environmental Design."
+            },
+            {
+              name: "Electrical Engineering",
+              color: "from-red-500 to-rose-600",
+              desc: "Power, Control Systems, Energy",
+              details: "Works with electrical systems, automation, and power distribution. Future areas include Smart Grids, Renewable Power, and IoT Devices."
+            },
+            {
+              name: "Electronics & Communication Engineering",
+              color: "from-pink-500 to-purple-600",
+              desc: "Communication, Circuits, Embedded Systems",
+              details: "Combines hardware and software for communication systems, embedded design, and robotics. Future scope includes IoT, 5G, and Space Technology."
+            },
+            {
+              name: "AI & Machine Learning",
+              color: "from-indigo-500 to-violet-600",
+              desc: "Smart Systems, Neural Networks, Data Science",
+              details: "Teaches how to make machines learn and think. Fields like Robotics, NLP, and Predictive Analytics are booming."
+            },
+          ].map((branch, i) => (
+            <div
+              key={i}
+              className={`p-6 rounded-2xl shadow-md bg-gradient-to-r ${branch.color} text-white hover:scale-[1.02] transition`}
+            >
+              <h3 className="text-xl font-bold mb-2">{branch.name}</h3>
+              <p className="opacity-90 mb-1 text-sm">{branch.desc}</p>
+              <p className="text-sm leading-snug">{branch.details}</p>
+            </div>
+          ))}
+        </div>
+
+        <div className="text-center space-y-4">
+          <h3 className="text-2xl font-bold text-indigo-700">🚀 Future Technologies in Engineering</h3>
+          <div className="flex flex-wrap justify-center gap-3">
+            {["AI & Automation", "Electric Vehicles", "IoT & 5G", "Sustainable Energy", "Space Tech", "Robotics", "Cybersecurity", "Cloud Computing"].map((trend, i) => (
+              <Badge key={i} className="px-4 py-2 text-sm bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-700 shadow">
+                {trend}
+              </Badge>
+            ))}
+          </div>
+        </div>
+      </section> */}
+      <section className="relative bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-100 rounded-3xl p-10 shadow-2xl overflow-hidden">
+        {/* Decorative background shapes */}
+        <div className="absolute -top-10 -left-10 w-64 h-64 bg-blue-200 opacity-30 rounded-full blur-3xl"></div>
+        <div className="absolute bottom-0 right-0 w-80 h-80 bg-purple-300 opacity-20 rounded-full blur-3xl"></div>
+
+        {/* Section Header */}
+        <div className="relative z-10 text-center space-y-4">
+          <h2 className="text-4xl md:text-5xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-indigo-600 to-purple-700 animate-fadeIn">
+            🌟 Explore Engineering in Depth
+          </h2>
+          <p className="text-lg md:text-xl text-gray-700 max-w-3xl mx-auto leading-relaxed">
+            Discover how each branch of engineering builds our world — from AI-driven technologies to sustainable cities.
+            <br />
+            Find which path resonates with <span className="font-semibold text-indigo-700">your curiosity and dreams</span>.
+          </p>
+        </div>
+
+        {/* Overview Section */}
+        <div className="relative z-10 mt-10 bg-white/80 backdrop-blur-md rounded-2xl p-8 shadow-inner border border-indigo-100">
+          <h3 className="text-3xl font-semibold text-indigo-700 mb-3">🔍 What is Engineering?</h3>
+          <p className="text-gray-700 leading-relaxed">
+            Engineering is the <span className="font-semibold text-indigo-600">bridge between imagination and reality</span>.
+            It combines science, mathematics, and innovation to design solutions that power progress — from self-driving cars to
+            renewable energy, from skyscrapers to smart devices.
+            <br /><br />
+            Choosing an engineering branch means choosing how you want to change the world — whether through
+            <span className="text-blue-600 font-medium"> code, machines, structures, circuits, or intelligence.</span>
+          </p>
+        </div>
+
+        {/* Branch Grid */}
+        <div className="relative z-10 mt-12 grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
+          {[
+            {
+              name: "💻 Computer Science & Engineering",
+              color: "from-blue-500 to-indigo-600",
+              desc: "Software • Algorithms • Data • AI",
+              details:
+                "CSE builds the digital world. You’ll master coding, data structures, AI, and cloud technologies. Careers include Software Developer, Data Scientist, Cybersecurity Analyst, or AI Engineer.",
+              future:
+                "With the rise of AI, Blockchain, and Cloud Computing, CSE remains the most in-demand branch globally."
+            },
+            {
+              name: "⚙️ Mechanical Engineering",
+              color: "from-yellow-400 to-orange-500",
+              desc: "Machines • Design • Robotics • Thermal Systems",
+              details:
+                "Mechanical engineers design, manufacture, and optimize machines. It’s a blend of physics, design, and innovation.",
+              future:
+                "Emerging fields include Electric Vehicles, Industrial Automation, Robotics, and Aerospace Engineering."
+            },
+            {
+              name: "🏗️ Civil Engineering",
+              color: "from-teal-500 to-cyan-600",
+              desc: "Structures • Smart Cities • Sustainability",
+              details:
+                "Civil engineers shape our surroundings — bridges, highways, skyscrapers, and water systems. They ensure safety and sustainability.",
+              future:
+                "Growing demand in Smart Cities, Green Construction, and Infrastructure Development worldwide."
+            },
+            {
+              name: "⚡ Electrical Engineering",
+              color: "from-red-500 to-rose-600",
+              desc: "Power • Control Systems • Renewable Energy",
+              details:
+                "EE powers the modern world — from smart grids to EV charging networks. You’ll work on circuits, energy systems, and automation.",
+              future:
+                "Huge growth in Smart Energy, IoT Devices, and Electric Mobility ecosystems."
+            },
+            {
+              name: "📡 Electronics & Communication Engineering",
+              color: "from-pink-500 to-purple-600",
+              desc: "Communication • Circuits • Embedded Systems",
+              details:
+                "ECE merges hardware and software to make smart devices communicate. Learn about microprocessors, antennas, and VLSI design.",
+              future:
+                "Key to IoT, 5G, Wearables, and Satellite Communication technologies."
+            },
+            {
+              name: "🤖 Artificial Intelligence & Machine Learning",
+              color: "from-indigo-500 to-violet-600",
+              desc: "Neural Networks • Smart Systems • Data Science",
+              details:
+                "AI/ML engineers teach machines to think, predict, and decide. Learn Python, Deep Learning, NLP, and Generative AI models.",
+              future:
+                "AI powers everything — healthcare, finance, automation, and even education. One of the fastest-growing tech domains."
+            },
+            {
+              name: "🧪 Chemical Engineering",
+              color: "from-green-400 to-lime-500",
+              desc: "Energy • Pharma • Materials • Process Design",
+              details:
+                "Focuses on converting raw materials into valuable products — fuels, medicines, polymers, and food.",
+              future:
+                "High demand in Renewable Fuels, Nanotech, and Green Manufacturing industries."
+            },
+            {
+              name: "🌍 Environmental Engineering",
+              color: "from-emerald-400 to-teal-500",
+              desc: "Sustainability • Waste Management • Climate Tech",
+              details:
+                "Protecting the planet through sustainable design and technology. Learn water purification, pollution control, and renewable systems.",
+              future:
+                "Crucial in combating global warming and building a cleaner, eco-friendly future."
+            },
+            {
+              name: "🛰️ Aerospace Engineering",
+              color: "from-blue-400 to-sky-600",
+              desc: "Aerodynamics • Flight Mechanics • Space Systems",
+              details:
+                "Designs aircraft, drones, and spacecraft — combining mechanics, electronics, and physics.",
+              future:
+                "Growing opportunities in Drone Tech, Defense, and Commercial Space Exploration (ISRO, SpaceX, etc.)."
+            },
+          ].map((branch, i) => (
+            <div
+              key={i}
+              className={`p-6 rounded-2xl shadow-lg bg-gradient-to-r ${branch.color} text-white transform hover:scale-105 transition-all duration-300 hover:shadow-2xl`}
+            >
+              <h3 className="text-xl font-bold mb-2">{branch.name}</h3>
+              <p className="text-sm opacity-90 mb-2 italic">{branch.desc}</p>
+              <p className="text-sm leading-snug mb-2">{branch.details}</p>
+              <p className="text-xs mt-1 opacity-80 font-semibold">🌟 Future Scope: {branch.future}</p>
+            </div>
+          ))}
+        </div>
+
+        {/* Future Tech Section */}
+        <div className="relative z-10 mt-16 text-center space-y-6">
+          <h3 className="text-3xl font-bold text-indigo-700">🚀 Emerging Technologies Shaping Engineering</h3>
+          <p className="text-gray-700 max-w-2xl mx-auto">
+            The world of engineering is evolving faster than ever — here are some exciting domains that are redefining the future:
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {[
+              "Artificial Intelligence",
+              "Electric Vehicles",
+              "Internet of Things (IoT)",
+              "5G & Communication Tech",
+              "Renewable Energy",
+              "Cybersecurity",
+              "Robotics & Automation",
+              "Cloud Computing",
+              "Augmented & Virtual Reality",
+              "Space Exploration",
+              "Quantum Computing",
+            ].map((trend, i) => (
+              <span
+                key={i}
+                className="px-4 py-2 rounded-full text-sm bg-gradient-to-r from-indigo-100 to-blue-100 text-indigo-700 font-medium shadow hover:shadow-md hover:scale-105 transition"
+              >
+                {trend}
+              </span>
+            ))}
+          </div>
+        </div>
+      </section>
+
 
       {/* Profile Card */}
       {profile && (
@@ -911,6 +1232,9 @@ export default function DashboardPage() {
         </Card>
       )}
 
+      {/* 🌟 Explore Engineering Section */}
+
+
       {/* Recommendations */}
       <div>
         <div className="flex items-center gap-2 mb-6">
@@ -956,4 +1280,5 @@ export default function DashboardPage() {
       )}
     </div>
   );
+
 }
