@@ -50,8 +50,14 @@ export default function CollegeCard({
 
 
 
-  const formatFees = (fees: number) =>
-    fees >= 100000 ? `₹${(fees / 100000).toFixed(1)}L` : `₹${fees.toLocaleString()}`;
+  // const formatFees = (fees: number) =>
+  //   fees >= 100000 ? `₹${(fees / 100000).toFixed(1)}L` : `₹${fees.toLocaleString()}`;
+  const formatFees = (fees?: number) => {
+    if (fees == null || isNaN(fees)) return "N/A";
+    return fees >= 100000
+      ? `₹${(fees / 100000).toFixed(1)}L`
+      : `₹${fees.toLocaleString()}`;
+  };
 
   const defaultImage =
     "https://images.pexels.com/photos/207692/pexels-photo-207692.jpeg?auto=compress&cs=tinysrgb&w=800";

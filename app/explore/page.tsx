@@ -155,7 +155,15 @@ const ExplorePage = () => {
 
     const handleFilterSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        fetchColleges();
+        // Redirect to recommendations page with filter params
+        const params = new URLSearchParams();
+        if (search) params.append('search', search);
+        if (location) params.append('location', location);
+        if (type !== 'all') params.append('type', type);
+        if (sortBy) params.append('sortBy', sortBy);
+        if (sortOrder) params.append('sortOrder', sortOrder);
+        
+        router.push(`/recommendations?${params.toString()}`);
     };
 
     if (loading)

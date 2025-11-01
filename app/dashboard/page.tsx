@@ -491,7 +491,7 @@ import { cn } from '@/lib/utils';
 export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
-  const [recommendations, setRecommendations] = useState<any[]>([]);
+  const [colleges, setColleges] = useState<any[]>([]);
   const [trendingBranches, setTrendingBranches] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [showProfileForm, setShowProfileForm] = useState(false);
@@ -542,23 +542,30 @@ export default function DashboardPage() {
     'Mechatronics Engineering'
   ];
 
-  const fetchRecommendations = async (token: string) => {
+  const fetchColleges = async () => {
+    try {
+      // Fetch colleges directly without boom calculation
+      const res = await fetch('/api/colleges');
+      if (res.ok) {
+        const data = await res.json();
+        setColleges(data || []);
+      }
+    } catch (err) {
+      console.error('Colleges fetch error:', err);
+    }
+  };
+
+  const fetchTrendingBranches = async (token: string) => {
     try {
       const res = await fetch('/api/recommendations', {
         headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         const data = await res.json();
-        const uniqueRecs = Array.from(
-          new Map(
-            (data.recommendations || []).map((rec: any) => [rec.college._id, rec])
-          ).values()
-        );
-        setRecommendations(uniqueRecs);
         setTrendingBranches(data.trendingBranches || []);
       }
     } catch (err) {
-      console.error('Recommendations fetch error:', err);
+      console.error('Trending branches fetch error:', err);
     }
   };
 
@@ -589,8 +596,11 @@ export default function DashboardPage() {
               : data.preferredBranch || [],
         });
       } else {
-        fetchRecommendations(token);
+        fetchTrendingBranches(token);
       }
+      
+      // Always fetch colleges (without boom calculation)
+      fetchColleges();
     } catch (err) {
       console.error('Profile fetch error:', err);
       toast.error('Failed to load profile');
@@ -640,8 +650,11 @@ export default function DashboardPage() {
 
       if (isComplete) {
         toast.success('Profile updated successfully!');
-        fetchRecommendations(token);
+        fetchTrendingBranches(token);
       } else toast.error('Profile still incomplete!');
+      
+      // Always fetch colleges
+      fetchColleges();
     } catch (err) {
       console.error(err);
       toast.error('Error updating profile');
@@ -1235,23 +1248,30 @@ export default function DashboardPage() {
       {/* 🌟 Explore Engineering Section */}
 
 
-      {/* Recommendations */}
+      {/* Colleges List (without boom calculation) */}
       <div>
-        <div className="flex items-center gap-2 mb-6">
-          <BookOpen className="h-6 w-6 text-blue-600" />
-          <h2 className="text-2xl font-bold text-gray-900">Your College Recommendations</h2>
+        <div className="flex items-center justify-between mb-6">
+          <div className="flex items-center gap-2">
+            <BookOpen className="h-6 w-6 text-blue-600" />
+            <h2 className="text-2xl font-bold text-gray-900">All Colleges</h2>
+          </div>
+          <Button 
+            variant="outline" 
+            onClick={() => router.push('/recommendations')}
+            className="bg-blue-600 text-white hover:bg-blue-700"
+          >
+            View with Boom Analysis
+          </Button>
         </div>
 
-        {recommendations.length > 0 ? (
+        {colleges.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {recommendations.slice(0, 9).map((rec, i) => (
+            {colleges.slice(0, 9).map((college) => (
               <CollegeCard
-                key={`${rec.college._id}-${i}`}
-                college={rec.college}
-                eligibilityScore={rec.eligibilityScore}
-                recommendedBranch={rec.branch.name}
-                onWishlistToggle={() => handleWishlistToggle(rec.college._id)}
-                isInWishlist={wishlistSet.has(rec.college._id)}
+                key={college._id}
+                college={college}
+                onWishlistToggle={() => handleWishlistToggle(college._id)}
+                isInWishlist={wishlistSet.has(college._id)}
               />
             ))}
           </div>
@@ -1260,21 +1280,21 @@ export default function DashboardPage() {
             <CardContent>
               <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
               <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No Recommendations Yet
+                No Colleges Found
               </h3>
               <p className="text-gray-600 mb-4">
-                Complete your profile to get personalized recommendations.
+                Check back later for college listings.
               </p>
-              <Button onClick={() => setShowProfileForm(true)}>Complete Profile</Button>
+              <Button onClick={() => fetchColleges()}>Refresh</Button>
             </CardContent>
           </Card>
         )}
       </div>
 
-      {recommendations.length > 9 && (
+      {colleges.length > 9 && (
         <div className="text-center">
           <Button variant="outline" onClick={() => router.push('/explore')}>
-            View All Recommendations
+            View All Colleges
           </Button>
         </div>
       )}
