@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
-import { GraduationCap, Users, Building, TrendingUp, Search, Heart, Shield } from 'lucide-react';
+import { GraduationCap, Users, Building, TrendingUp, Search, Heart, Shield, ArrowRight, Sparkles } from 'lucide-react';
 
 const stats = [
   { icon: Building, label: 'Engineering Colleges', value: '250+', color: 'text-blue-600' },
@@ -298,24 +298,47 @@ export default function HomePage() {
             Our smart platform helps you make the best decision for your future.
           </p>
 
+          <style jsx>{`
+            @keyframes bounce-arrow {
+              0%, 100% {
+                transform: translateY(-3px);
+              }
+              50% {
+                transform: translateY(3px);
+              }
+            }
+            .animate-bounce-arrow {
+              animation: bounce-arrow 1s ease-in-out infinite;
+            }
+          `}</style>
+          
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
             {!user ? (
               <>
                 <Link href="/register">
-                  <button className="bg-yellow-400 hover:bg-yellow-300 text-blue-900 font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1">
-                    Get Started Free
+                  <button className="group relative bg-yellow-400 hover:bg-yellow-300 text-blue-900 font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-105 overflow-hidden">
+                    <span className="absolute inset-0 bg-gradient-to-r from-yellow-300 to-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                    <span className="relative flex items-center gap-2">
+                      <Sparkles className="h-5 w-5 animate-pulse" />
+                      Get Started Free
+                      <ArrowRight className="h-5 w-5 animate-bounce-arrow" style={{animation: 'bounce-arrow 1s ease-in-out infinite'}} />
+                    </span>
                   </button>
                 </Link>
                 <Link href="/login">
-                  <button className="bg-white hover:bg-blue-100 text-blue-700 font-bold px-10 py-4 rounded-full shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1">
+                  <button className="group bg-white hover:bg-blue-100 text-blue-700 font-bold px-10 py-4 rounded-full shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 hover:scale-105">
                     Login
                   </button>
                 </Link>
               </>
             ) : (
               <Link href="/dashboard">
-                <button className="bg-yellow-400 hover:bg-yellow-300 text-blue-900 font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1">
-                  Go to Dashboard
+                <button className="group relative bg-yellow-400 hover:bg-yellow-300 text-blue-900 font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-105 overflow-hidden">
+                  <span className="absolute inset-0 bg-gradient-to-r from-yellow-300 to-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                  <span className="relative flex items-center gap-2">
+                    Go to Dashboard
+                    <ArrowRight className="h-5 w-5 animate-bounce-arrow" style={{animation: 'bounce-arrow 1s ease-in-out infinite'}} />
+                  </span>
                 </button>
               </Link>
             )}
@@ -368,14 +391,20 @@ export default function HomePage() {
           </p>
           {!user ? (
             <Link href="/register">
-              <button className="bg-white text-blue-600 font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1">
-                Start Your Journey Today
+              <button className="group relative bg-white text-blue-600 font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-105 overflow-hidden">
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                <span className="relative flex items-center gap-2">
+                  Start Your Journey Today
+                </span>
               </button>
             </Link>
           ) : (
             <Link href="/explore">
-              <button className="bg-white text-blue-600 font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1">
-                Explore Colleges
+              <button className="group relative bg-white text-blue-600 font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-105 overflow-hidden">
+                <span className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity"></span>
+                <span className="relative flex items-center gap-2">
+                  Explore Colleges
+                </span>
               </button>
             </Link>
           )}

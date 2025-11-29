@@ -3,10 +3,13 @@
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Checkbox } from '@/components/ui/checkbox';
 import CollegeCard from '@/components/CollegeCard';
-import { TrendingUp, BookOpen } from 'lucide-react';
+import { TrendingUp, BookOpen, Settings } from 'lucide-react';
 import { toast } from 'sonner';
 import { calculateBoomFlag, Branch } from '@/lib/recommendation';
 import { ICollege } from '@/types/college';
@@ -18,12 +21,84 @@ interface CollegeWithBoom extends ICollege {
   }>;
 }
 
+// Normalize branch names and common aliases to improve matching
+const normalizeBranch = (name: string) => {
+  const n = String(name || '').trim().toLowerCase()
+    .replace(/\s+/g, ' ') // normalize whitespace
+    .replace(/[()]/g, '') // remove parentheses
+    .replace(/&/g, 'and'); // normalize & to and
+  
+  const map: Record<string, string> = {
+    'cs': 'computer science and engineering',
+    'cse': 'computer science and engineering',
+    'computer science': 'computer science and engineering',
+    'computer science and engineering': 'computer science and engineering',
+    'computer science and engineering cse': 'computer science and engineering',
+    'ise': 'information science and engineering',
+    'it': 'information technology',
+    'ece': 'electronics and communication engineering',
+    'electronics and communication engineering': 'electronics and communication engineering',
+    'electronics and communication engineering ece': 'electronics and communication engineering',
+    'eee': 'electrical and electronics engineering',
+    'electrical and electronics engineering': 'electrical and electronics engineering',
+    'electrical and electronics engineering eee': 'electrical and electronics engineering',
+    'civil': 'civil engineering',
+    'civil engineering': 'civil engineering',
+    'mech': 'mechanical engineering',
+    'mechanical': 'mechanical engineering',
+    'mechanical engineering': 'mechanical engineering',
+    'ai': 'artificial intelligence',
+    'aiandds': 'artificial intelligence and data science',
+    'aiandml': 'artificial intelligence and machine learning',
+    'aiml': 'artificial intelligence and machine learning',
+    'artificial intelligence': 'artificial intelligence',
+    'artificial intelligence and machine learning': 'artificial intelligence and machine learning',
+    'artificial intelligence and machine learning aiml': 'artificial intelligence and machine learning',
+  };
+  return map[n] || n;
+};
+
+// Check if a branch name matches any preferred aliases (strict or substring)
+const matchesPreferred = (branchName: string, preferred: string[]) => {
+  const bn = String(branchName || '').toLowerCase();
+  const normalizedBn = normalizeBranch(bn);
+
+  for (const p of preferred) {
+    const np = normalizeBranch(p);
+    
+    // Exact match on normalized names
+    if (normalizedBn === np) return true;
+    
+    // Check if either contains the other (for partial matches)
+    if (normalizedBn.includes(np) || np.includes(normalizedBn)) return true;
+    
+    // Special handling for common abbreviations
+    if (np.includes('computer science') && (bn.includes('cse') || bn.includes('computer science'))) return true;
+    if (np.includes('electronics and communication') && (bn.includes('ece') || bn.includes('electronics'))) return true;
+    if (np.includes('electrical and electronics') && (bn.includes('eee') || bn.includes('electrical'))) return true;
+    if (np.includes('artificial intelligence') && (bn.includes('ai') || bn.includes('artificial intelligence'))) return true;
+    if (np.includes('civil') && bn.includes('civil')) return true;
+    if (np.includes('mechanical') && bn.includes('mechanical')) return true;
+  }
+  
+  return false;
+};
+
 export default function RecommendationsPage() {
   const router = useRouter();
   const [colleges, setColleges] = useState<CollegeWithBoom[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [wishlistSet, setWishlistSet] = useState<Set<string>>(new Set());
   const [profileComplete, setProfileComplete] = useState<boolean | null>(null);
+  const [preferredBranches, setPreferredBranches] = useState<string[]>([]);
+  const [userCategory, setUserCategory] = useState<string | null>(null);
+  const [userRank, setUserRank] = useState<number | null>(null);
+  const [showEditForm, setShowEditForm] = useState(false);
+  const [profileForm, setProfileForm] = useState({
+    rank: '',
+    category: '',
+    preferredBranch: [] as string[],
+  });
 
   // Fetch personalized recommendations based on profile
   const fetchRecommendations = async () => {
@@ -48,8 +123,23 @@ export default function RecommendationsPage() {
       }
 
       const profile = await profileRes.json();
-      const isComplete = !!(profile.rank && profile.category && profile.preferredBranch);
+      const prefArray: string[] = Array.isArray(profile.preferredBranch)
+        ? profile.preferredBranch
+        : profile.preferredBranch
+        ? [profile.preferredBranch]
+        : [];
+      setPreferredBranches(prefArray);
+      if (profile.category) setUserCategory(profile.category);
+      if (typeof profile.rank === 'number') setUserRank(profile.rank);
+      const isComplete = !!(profile.rank && profile.category && prefArray.length > 0);
       setProfileComplete(isComplete);
+      
+      // Initialize profile form with current values
+      setProfileForm({
+        rank: profile.rank?.toString() || '',
+        category: profile.category || '',
+        preferredBranch: prefArray,
+      });
 
       if (!isComplete) {
         setLoading(false);
@@ -69,16 +159,60 @@ export default function RecommendationsPage() {
       }
 
       const data = await res.json();
-      const recommendations = data.recommendations || [];
+      let recommendations = data.recommendations || [];
+      
+      console.log('Raw recommendations from API:', recommendations.length);
+      console.log('User preferred branches:', prefArray);
+      if (recommendations.length > 0) {
+        console.log('Sample branch names from API:', recommendations.slice(0, 3).map((r: any) => r.branch?.name));
+      }
+
+      // Only keep recommendations whose branch matches user's preferred branches
+      if (prefArray.length > 0) {
+        const beforeFilter = recommendations.length;
+        recommendations = recommendations.filter((rec: any) => {
+          const matches = matchesPreferred(rec?.branch?.name || '', prefArray);
+          if (!matches && beforeFilter < 5) {
+            console.log('Branch not matched:', rec?.branch?.name, 'against', prefArray);
+          }
+          return matches;
+        });
+        console.log('After preferred branch filter:', recommendations.length);
+      }
+
+      // Enforce rank threshold: only show colleges where adjustedCutoff >= userRank
+      if (typeof profile.rank === 'number') {
+        recommendations = recommendations.filter((rec: any) =>
+          typeof rec.adjustedCutoff === 'number' ? profile.rank <= rec.adjustedCutoff : true
+        );
+        console.log('After rank filter:', recommendations.length);
+      }
 
       // Process recommendations and calculate boom
       // Recommendations already have college and branch matched
+      const selectedCategory: string | undefined = profile.category;
       const collegesWithBoom: CollegeWithBoom[] = recommendations.map((rec: any) => {
         const college = rec.college;
         const recommendedBranch = rec.branch;
         
-        // Calculate boom for all branches in the college, but highlight the recommended one
-        const branchesWithBoom = college.branchesOffered.map((branch: any) => {
+        // Only show the recommended branch, not all branches
+        const source = recommendedBranch?.cutoff instanceof Map 
+          ? Object.fromEntries(recommendedBranch.cutoff as any) 
+          : recommendedBranch?.cutoff || {};
+        
+        const singleCat: any = {};
+        if (selectedCategory && source[selectedCategory] != null) {
+          singleCat[selectedCategory] = source[selectedCategory];
+        }
+        
+        // Create array with only the recommended branch
+        const branchesForCard = [{
+          ...recommendedBranch,
+          cutoff: singleCat
+        }];
+        
+        const branchesSource = college.branchesOffered || [];
+        const branchesWithBoom = branchesSource.map((branch: any) => {
           // Convert ICollege branch cutoff to Branch type cutoff
           // Handle MongoDB Map type, regular object, or ICutoff structure
           const cutoffDict: { [category: string]: number } = {};
@@ -161,7 +295,7 @@ export default function RecommendationsPage() {
           return {
             branch: branchForBoom,
             boomPercent,
-            isRecommended: branch.name === recommendedBranch.name,
+            isRecommended: true,
           };
         });
 
@@ -172,6 +306,8 @@ export default function RecommendationsPage() {
 
         return {
           ...college,
+          // Pass only preferred branches and selected category cutoff for display
+          branchesOffered: branchesForCard,
           branchesWithBoom,
           recommendedBranch: recommendedBranch.name,
           eligibilityScore: rec.eligibilityScore,
@@ -189,8 +325,9 @@ export default function RecommendationsPage() {
   };
 
   useEffect(() => {
+    // Auto fetch recommendations on mount
     fetchRecommendations();
-    
+
     // Fetch wishlist
     const token = localStorage.getItem('token');
     if (token) {
@@ -202,10 +339,77 @@ export default function RecommendationsPage() {
           if (profile.wishlist && Array.isArray(profile.wishlist)) {
             setWishlistSet(new Set(profile.wishlist.map((c: any) => c._id || c.id)));
           }
+          const prefArray: string[] = Array.isArray(profile.preferredBranch)
+            ? profile.preferredBranch
+            : profile.preferredBranch
+            ? [profile.preferredBranch]
+            : [];
+          setPreferredBranches(prefArray);
+          if (profile.category) setUserCategory(profile.category);
+          if (typeof profile.rank === 'number') setUserRank(profile.rank);
+          
+          // Initialize profile form with current values
+          setProfileForm({
+            rank: profile.rank?.toString() || '',
+            category: profile.category || '',
+            preferredBranch: prefArray,
+          });
         })
         .catch((err) => console.error('Wishlist fetch error:', err));
     }
   }, []);
+
+  const handleProfileSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const token = localStorage.getItem('token');
+    if (!token) {
+      toast.error('Please login to update profile');
+      return;
+    }
+
+    try {
+      const res = await fetch('/api/student/profile', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify(profileForm),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        toast.error(err.error || 'Failed to update profile');
+        return;
+      }
+
+      const updated = await res.json();
+      const prefArray: string[] = Array.isArray(updated.preferredBranch)
+        ? updated.preferredBranch
+        : updated.preferredBranch
+        ? [updated.preferredBranch]
+        : [];
+      
+      setPreferredBranches(prefArray);
+      if (updated.category) setUserCategory(updated.category);
+      if (typeof updated.rank === 'number') setUserRank(updated.rank);
+      
+      const isComplete = !!(updated.rank && updated.category && prefArray.length > 0);
+      setProfileComplete(isComplete);
+      setShowEditForm(false);
+
+      if (isComplete) {
+        toast.success('Profile updated successfully!');
+        // Refresh recommendations
+        await fetchRecommendations();
+      } else {
+        toast.error('Profile still incomplete!');
+      }
+    } catch (err) {
+      console.error(err);
+      toast.error('Error updating profile');
+    }
+  };
 
   const handleWishlistToggle = async (collegeId: string) => {
     const token = localStorage.getItem('token');
@@ -286,6 +490,141 @@ export default function RecommendationsPage() {
         </Card>
       )}
 
+      {/* Edit Profile Form */}
+      {showEditForm && (
+        <Card className="shadow-lg rounded-xl border-blue-200 bg-blue-50">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Settings className="h-5 w-5 text-blue-600" />
+              Edit Your Profile
+            </CardTitle>
+            <CardDescription>
+              Update your CET details to get better personalized college recommendations
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleProfileSubmit} className="space-y-6">
+              {/* Rank */}
+              <div className="space-y-2">
+                <Label htmlFor="rank">CET Rank</Label>
+                <Input
+                  id="rank"
+                  type="number"
+                  placeholder="Enter your CET rank"
+                  value={profileForm.rank}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, rank: e.target.value })
+                  }
+                  required
+                />
+              </div>
+
+              {/* Category */}
+              <div className="space-y-2">
+                <Label>Category</Label>
+                <select
+                  className="w-full border rounded-md p-2"
+                  value={profileForm.category}
+                  onChange={(e) =>
+                    setProfileForm({ ...profileForm, category: e.target.value })
+                  }
+                  required
+                >
+                  <option value="">Select category</option>
+                  {[
+                    '1G', '1K', '1R', '2AG', '2AK', '2AR', '2BG', '2BK', '2BR',
+                    '3AG', '3AK', '3AR', '3BG', '3BK', '3BR', 'GM', 'GMK', 'GMP',
+                    'GMR', 'NRI', 'OPN', 'OTH', 'SCG', 'SCK', 'SCR', 'STG', 'STK', 'STR',
+                  ].map((cat) => (
+                    <option key={cat} value={cat}>
+                      {cat}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Preferred Branches */}
+              <div className="space-y-3">
+                <Label>Preferred Branches</Label>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                  {[
+                    "Computer Science & Engineering",
+                    "Information Science & Engineering",
+                    "Electronics & Communication Engineering",
+                    "Mechanical Engineering",
+                    "Civil Engineering",
+                    "Artificial Intelligence & Machine Learning",
+                    "Electrical & Electronics Engineering",
+                  ].map((branch) => (
+                    <div
+                      key={branch}
+                      className="flex items-center space-x-2 bg-white p-3 rounded-lg hover:bg-gray-50 transition border border-gray-200"
+                    >
+                      <Checkbox
+                        id={branch}
+                        checked={profileForm.preferredBranch.includes(branch)}
+                        onCheckedChange={() => {
+                          setProfileForm((prev) => {
+                            const selected = prev.preferredBranch.includes(branch)
+                              ? prev.preferredBranch.filter((b) => b !== branch)
+                              : [...prev.preferredBranch, branch];
+                            return { ...prev, preferredBranch: selected };
+                          });
+                        }}
+                      />
+                      <label
+                        htmlFor={branch}
+                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                      >
+                        {branch}
+                      </label>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex gap-2">
+                <Button type="submit" className="flex-1">
+                  Save Profile
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={() => setShowEditForm(false)}
+                >
+                  Cancel
+                </Button>
+              </div>
+            </form>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Context: Show selected Category and Preferred Branches */}
+      {profileComplete && !showEditForm && (
+        <div className="flex flex-wrap items-center gap-2 -mt-4 justify-between">
+          <div className="flex flex-wrap items-center gap-2">
+            {userCategory && (
+              <Badge className="bg-blue-50 text-blue-700 border border-blue-200">Category: {userCategory}</Badge>
+            )}
+            {typeof userRank === 'number' && (
+              <Badge className="bg-green-50 text-green-700 border border-green-200">Rank: {userRank}</Badge>
+            )}
+            {preferredBranches && preferredBranches.length > 0 && (
+              <Badge variant="outline" className="border-emerald-300 text-emerald-700">
+                {preferredBranches.join(', ')}
+              </Badge>
+            )}
+          </div>
+          <div className="flex items-center gap-2">
+            <Button variant="outline" onClick={() => fetchRecommendations()} disabled={loading}>
+              {loading ? 'Refreshing…' : 'Get by Rank'}
+            </Button>
+            <Button onClick={() => setShowEditForm(true)}>Edit Profile</Button>
+          </div>
+        </div>
+      )}
+
       {/* Colleges Grid with Boom */}
       <div>
         <div className="flex items-center gap-2 mb-6">
@@ -296,14 +635,15 @@ export default function RecommendationsPage() {
         </div>
 
         {profileComplete && colleges.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch auto-rows-fr">
             {colleges.map((college: any) => {
               // Use the recommended branch from the recommendation API
               const recommendedBranchBoom = college.recommendedBoomPercent;
               const recommendedBranch = college.recommendedBranch;
 
               return (
-                <div key={college._id} className="relative">
+                <div key={college._id} className="relative h-full">
+                  <div className="h-full min-h-[520px] flex flex-col">
                   <CollegeCard
                     college={college}
                     eligibilityScore={college.eligibilityScore}
@@ -321,34 +661,8 @@ export default function RecommendationsPage() {
                     </div>
                   )}
 
-                  {/* Show boom for all branches */}
-                  {college.branchesWithBoom && college.branchesWithBoom.length > 0 && (
-                    <Card className="mt-2 p-3 bg-gradient-to-r from-green-50 to-emerald-50 border border-green-200">
-                      <div className="text-xs font-semibold text-gray-700 mb-2">Branch Boom Analysis:</div>
-                      <div className="space-y-1 max-h-32 overflow-y-auto">
-                        {college.branchesWithBoom.map((item: any, idx: number) => (
-                          <div key={idx} className="flex justify-between items-center text-xs">
-                            <span className={`text-gray-600 ${item.isRecommended ? 'font-bold text-blue-700' : ''}`}>
-                              {item.branch.name}
-                              {item.isRecommended && ' ⭐'}
-                            </span>
-                            <Badge
-                              variant="outline"
-                              className={`${
-                                item.boomPercent >= 70
-                                  ? 'bg-green-100 text-green-800 border-green-300'
-                                  : item.boomPercent >= 40
-                                  ? 'bg-yellow-100 text-yellow-800 border-yellow-300'
-                                  : 'bg-gray-100 text-gray-800 border-gray-300'
-                              } ${item.isRecommended ? 'ring-2 ring-blue-400' : ''}`}
-                            >
-                              {item.boomPercent}%
-                            </Badge>
-                          </div>
-                        ))}
-                      </div>
-                    </Card>
-                  )}
+                  {/* Branch list hidden as per requirement to not display all branches */}
+                  </div>
                 </div>
               );
             })}
@@ -357,13 +671,14 @@ export default function RecommendationsPage() {
           <Card className="shadow-lg rounded-xl text-center py-12">
             <CardContent>
               <BookOpen className="h-12 w-12 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Colleges Found</h3>
+              <h3 className="text-lg font-semibold text-gray-900 mb-2">No Matching Colleges</h3>
               <p className="text-gray-600 mb-4">
-                Check back later for college listings.
+                No colleges matched your category and preferred branches. Try updating your profile preferences.
               </p>
-              <Button variant="outline" onClick={() => fetchRecommendations()}>
-                Refresh
-              </Button>
+              <div className="flex gap-2 justify-center">
+                <Button variant="outline" onClick={() => fetchRecommendations()}>Refresh</Button>
+                <Button onClick={() => setShowEditForm(true)}>Edit Profile</Button>
+              </div>
             </CardContent>
           </Card>
         )}

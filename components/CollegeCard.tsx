@@ -205,7 +205,7 @@ export default function CollegeCard({
 
 
     //     </Card>
-    <Card className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 bg-white border border-gray-100">
+    <Card className="group relative overflow-hidden rounded-2xl shadow-lg hover:shadow-2xl transition-all duration-500 hover:-translate-y-1 bg-white border border-gray-100 h-full flex flex-col">
       {/* Background gradient overlay for style */}
       <div className="absolute inset-0 bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50 opacity-70 group-hover:opacity-90 transition-all duration-500"></div>
 
@@ -261,7 +261,7 @@ export default function CollegeCard({
         )}
       </CardHeader>
 
-      <CardContent className="relative z-10 space-y-4">
+      <CardContent className="relative z-10 space-y-4 flex-1 flex flex-col">
 
         {/* Location */}
         <div className="flex items-center text-sm text-gray-600">
@@ -351,7 +351,7 @@ export default function CollegeCard({
 
         {/* View Details Button */}
         {showActions && (
-          <div className="pt-4">
+          <div className="pt-4 mt-auto">
             <Button
               variant="outline"
               size="sm"

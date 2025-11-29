@@ -14787,17 +14787,38 @@ const sampleColleges = [
   }
 ];
 
+async function seedDatabase() {
+  await connectDB();
+  
+  // Create admin if doesn't exist
+  const adminExists = await Admin.findOne({ username: 'admin' });
+  if (!adminExists) {
+    const admin = new Admin({ username: 'admin', password: 'admin' });
+    await admin.save();
+    console.log('Admin user created');
+  }
+  
+  // Clear and seed colleges
+  await College.deleteMany({});
+  await College.insertMany(sampleColleges);
+  
+  return { message: 'Database seeded successfully', collegesCount: sampleColleges.length };
+}
+
 export async function POST(request: NextRequest) {
   try {
-    await connectDB();
-    const adminExists = await Admin.findOne({ username: 'admin' });
-    if (!adminExists) {
-      const admin = new Admin({ username: 'admin', password: 'admin' });
-      await admin.save();
-    }
-    await College.deleteMany({});
-    await College.insertMany(sampleColleges);
-    return NextResponse.json({ message: 'Seeded with AI-handled data', collegesCount: sampleColleges.length });
+    const result = await seedDatabase();
+    return NextResponse.json(result);
+  } catch (error) {
+    console.error('Seed error:', error);
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+  }
+}
+
+export async function GET(request: NextRequest) {
+  try {
+    const result = await seedDatabase();
+    return NextResponse.json(result);
   } catch (error) {
     console.error('Seed error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

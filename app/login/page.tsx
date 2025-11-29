@@ -122,7 +122,7 @@ export default function LoginPage() {
           <TabsContent value="admin">
             <Card>
               <CardHeader>
-                <CardTitle>Admin Login Le ida</CardTitle>
+                <CardTitle>Admin Login </CardTitle>
                 <CardDescription>
                   Access the administrative dashboard
                 </CardDescription>
@@ -132,7 +132,7 @@ export default function LoginPage() {
                   <Label htmlFor="admin-username">Username</Label>
                   <Input
                     id="admin-username"
-                    placeholder="desai"
+                    placeholder="admin"
                     value={adminData.username}
                     onChange={(e) => setAdminData({ ...adminData, username: e.target.value })}
                   />
@@ -155,7 +155,7 @@ export default function LoginPage() {
                   onClick={() => handleLogin(adminData, 'admin')}
                   disabled={loading || !adminData.username || !adminData.password}
                 >
-                  {loading ? 'tadako ro bhi...' : 'Admin Sign In'}
+                  {loading ? 'loading' : 'Admin Sign In'}
                 </Button>
               </CardContent>
             </Card>

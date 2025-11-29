@@ -383,55 +383,40 @@ export function calculateEligibilityScore(studentRank: number, adjustedCutoff: n
 // ================== RECOMMENDATION ENGINE ==================
 export function getRecommendations(colleges: College[], student: Student): Recommendation[] {
   const recommendations: Recommendation[] = [];
+  
+  console.log('=== RECOMMENDATION DEBUG ===');
+  console.log('Student rank:', student.rank);
+  console.log('Student category:', student.category);
+  console.log('Student preferred branches:', student.preferredBranch);
 
   for (const college of colleges) {
     for (const branch of college.branchesOffered) {
       const boomFlag = calculateBoomFlag(branch);
 
       // Category cutoff fallback
-      // const originalCutoff =
-      //   branch.cutoff[student.category as keyof typeof branch.cutoff] ??
-      //   branch.cutoff.general;
       const originalCutoff =
-  branch.cutoff[student.category as keyof typeof branch.cutoff] ??
-  branch.cutoff.general ??
-  100000; // large number to ensure eligibility
-
+        branch.cutoff[student.category as keyof typeof branch.cutoff] ??
+        branch.cutoff.general ??
+        100000; // large number to ensure eligibility
 
       const adjustedCutoff = adjustCutoff(originalCutoff, boomFlag);
+      
+      const isEligible = checkEligibility(student.rank, adjustedCutoff);
 
-      if (checkEligibility(student.rank, adjustedCutoff)) {
+      if (isEligible) {
         let eligibilityScore = calculateEligibilityScore(student.rank, adjustedCutoff);
 
-        // ✅ Preferred branch bonus for multi-select
-        // if (
-        //   student.preferredBranch &&
-        //   student.preferredBranch.some(
-        //     pb => pb.toLowerCase() === branch.name.toLowerCase()
-        //   )
-        // ) {
-        //   eligibilityScore *= 1.1; // 10% boost
-        // }
-        // Preferred branch bonus
-// if (
-//   student.preferredBranch &&
-//   Array.isArray(student.preferredBranch) &&
-//   student.preferredBranch.some(pb => pb.toLowerCase() === branch.name.toLowerCase())
-// ) {
-//   eligibilityScore *= 1.1; // 10% boost
-// }
-// Ensure preferredBranch is a flat array of strings
-const preferredBranches: string[] = Array.isArray(student.preferredBranch)
-  ? student.preferredBranch.flat().filter(pb => typeof pb === 'string')
-  : [];
+        // Ensure preferredBranch is a flat array of strings
+        const preferredBranches: string[] = Array.isArray(student.preferredBranch)
+          ? student.preferredBranch.flat().filter(pb => typeof pb === 'string')
+          : [];
 
-if (
-  preferredBranches.length > 0 &&
-  preferredBranches.some(pb => pb.toLowerCase() === branch.name.toLowerCase())
-) {
-  eligibilityScore *= 1.1; // 10% boost
-}
-
+        if (
+          preferredBranches.length > 0 &&
+          preferredBranches.some(pb => pb.toLowerCase() === branch.name.toLowerCase())
+        ) {
+          eligibilityScore *= 1.1; // 10% boost
+        }
 
         recommendations.push({
           college,
@@ -443,9 +428,16 @@ if (
       }
     }
   }
-  // console.log('Total recommendations:', recommendations.length);
-  // console.log('Sample recommendation:', recommendations[0]);
-  // console.log('all recommendations:', recommendations);
+  
+  console.log('Total eligible recommendations:', recommendations.length);
+  if (recommendations.length > 0) {
+    console.log('Sample recommendation:', {
+      college: recommendations[0].college.name,
+      branch: recommendations[0].branch.name,
+      eligibilityScore: recommendations[0].eligibilityScore
+    });
+  }
+  
   // Sort by score desc, then fees asc
   return recommendations.sort((a, b) => {
     if (b.eligibilityScore !== a.eligibilityScore) {

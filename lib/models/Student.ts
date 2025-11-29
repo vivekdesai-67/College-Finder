@@ -120,8 +120,7 @@ const studentSchema = new mongoose.Schema<IStudent>(
       ],
       default: 'GM',
     },
-    // preferredBranch: [{ type: String }], // ✅ array field
-    preferredBranch: [{ type: [String], default: [] }],
+    preferredBranch: [{ type: String }], // ✅ array field
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: College.modelName }],
     profileComplete: { type: Boolean, default: false },
   },

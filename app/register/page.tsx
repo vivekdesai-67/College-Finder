@@ -14,6 +14,7 @@ export default function RegisterPage() {
   const [formData, setFormData] = useState({
     username: '',
     email: '',
+    phone: '',
     password: '',
     confirmPassword: '',
     address: ''
@@ -37,6 +38,7 @@ export default function RegisterPage() {
         body: JSON.stringify({
           username: formData.username,
           email: formData.email,
+          phone: formData.phone,
           password: formData.password,
           address: formData.address
         }),
@@ -107,6 +109,22 @@ export default function RegisterPage() {
                   placeholder="your.email@example.com"
                   value={formData.email}
                   onChange={handleChange}
+                  required
+                />
+              </div>
+              
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  placeholder="+91 9876543210"
+                  value={formData.phone}
+                  onChange={handleChange}
+                  pattern="[0-9+\s-]+"
+                  minLength={10}
+                  maxLength={15}
                   required
                 />
               </div>

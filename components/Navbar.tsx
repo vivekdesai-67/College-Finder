@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { GraduationCap, User, LogOut, Menu, X } from 'lucide-react';
 
@@ -10,15 +10,30 @@ export default function Navbar() {
   const [user, setUser] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
+  const pathname = usePathname();
 
   useEffect(() => {
-    const token = localStorage.getItem('token');
-    const userData = localStorage.getItem('user');
-    
-    if (token && userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
+    // Check user authentication on mount and route change
+    const checkAuth = () => {
+      const token = localStorage.getItem('token');
+      const userData = localStorage.getItem('user');
+      
+      if (token && userData) {
+        try {
+          setUser(JSON.parse(userData));
+        } catch (error) {
+          console.error('Error parsing user data:', error);
+          localStorage.removeItem('token');
+          localStorage.removeItem('user');
+          setUser(null);
+        }
+      } else {
+        setUser(null);
+      }
+    };
+
+    checkAuth();
+  }, [pathname]);
 
   const handleLogout = () => {
     localStorage.removeItem('token');
@@ -48,6 +63,9 @@ export default function Navbar() {
                   <>
                     <Link href="/dashboard" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
                       Dashboard
+                    </Link>
+                    <Link href="/recommendations" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                      Recommendations
                     </Link>
                     <Link href="/explore" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
                       Explore
@@ -125,6 +143,13 @@ export default function Navbar() {
                         onClick={() => setIsMenuOpen(false)}
                       >
                         Dashboard
+                      </Link>
+                      <Link
+                        href="/recommendations"
+                        className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Recommendations
                       </Link>
                       <Link
                         href="/explore"

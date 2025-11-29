@@ -152,6 +152,14 @@ export async function GET(request: NextRequest) {
 
     const trendingBranches = getTrendingBranches(colleges);
 
+    // Debug logging
+    console.log('Student data:', studentData);
+    console.log('Total colleges:', colleges.length);
+    console.log('Total recommendations:', recommendations.length);
+    if (colleges.length > 0) {
+      console.log('Sample college branches:', colleges[0].branchesOffered.map(b => b.name));
+    }
+
     return NextResponse.json({
       recommendations: recommendations.slice(0, 20), // Top 20 recommendations
       trendingBranches,

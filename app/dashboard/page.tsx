@@ -751,13 +751,13 @@ export default function DashboardPage() {
                 <Label>Preferred Branches</Label>
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
                   {[
-                    "Computer Science",
-                    "Information Science",
-                    "Electronics & Communication",
-                    "Mechanical",
-                    "Civil",
-                    "AI & Data Science",
-                    "Electrical & Electronics",
+                    "Computer Science & Engineering",
+                    "Information Science & Engineering",
+                    "Electronics & Communication Engineering",
+                    "Mechanical Engineering",
+                    "Civil Engineering",
+                    "Artificial Intelligence & Machine Learning",
+                    "Electrical & Electronics Engineering",
                   ].map((branch) => (
                     <div
                       key={branch}
@@ -1260,19 +1260,22 @@ export default function DashboardPage() {
             onClick={() => router.push('/recommendations')}
             className="bg-blue-600 text-white hover:bg-blue-700"
           >
-            View with Boom Analysis
+             Based on Your Profile
           </Button>
         </div>
 
         {colleges.length > 0 ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch auto-rows-fr">
             {colleges.slice(0, 9).map((college) => (
-              <CollegeCard
-                key={college._id}
-                college={college}
-                onWishlistToggle={() => handleWishlistToggle(college._id)}
-                isInWishlist={wishlistSet.has(college._id)}
-              />
+              <div key={college._id} className="h-full">
+                <div className="h-full min-h-[520px] flex flex-col">
+                  <CollegeCard
+                    college={college}
+                    onWishlistToggle={() => handleWishlistToggle(college._id)}
+                    isInWishlist={wishlistSet.has(college._id)}
+                  />
+                </div>
+              </div>
             ))}
           </div>
         ) : (

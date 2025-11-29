@@ -18,7 +18,7 @@ type Branch = {
   placementRate: number;
   avgSalary: number;
   maxSalary: number;
-  cutoff: { general: number; obc: number; sc: number; st: number };
+  cutoff: { [key: string]: number };
   admissionTrend: number;
   industryGrowth: number;
   isBooming: boolean;
@@ -129,7 +129,16 @@ export default function AdminDashboardPage() {
   const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
   // -------------------- BRANCH FUNCTIONS --------------------
+  const CATEGORIES = [
+    '1G', '1K', '1R', '2AG', '2AK', '2AR', '2BG', '2BK', '2BR',
+    '3AG', '3AK', '3AR', '3BG', '3BK', '3BR', 'GM', 'GMK', 'GMP',
+    'GMR', 'NRI', 'OPN', 'OTH', 'SCG', 'SCK', 'SCR', 'STG', 'STK', 'STR',
+  ];
+
   const addBranch = () => {
+    const defaultCutoff: { [key: string]: number } = {};
+    CATEGORIES.forEach(cat => defaultCutoff[cat] = 0);
+    
     setNewCollege({
       ...newCollege,
       branchesOffered: [
@@ -139,7 +148,7 @@ export default function AdminDashboardPage() {
           placementRate: 0,
           avgSalary: 0,
           maxSalary: 0,
-          cutoff: { general: 0, obc: 0, sc: 0, st: 0 },
+          cutoff: defaultCutoff,
           admissionTrend: 0,
           industryGrowth: 0,
           isBooming: false,
@@ -154,7 +163,7 @@ export default function AdminDashboardPage() {
     setNewCollege({ ...newCollege, branchesOffered: branches });
   };
 
-  const updateBranchCutoff = (idx: number, field: keyof Branch['cutoff'], value: number) => {
+  const updateBranchCutoff = (idx: number, field: string, value: number) => {
     const branches = [...newCollege.branchesOffered];
     branches[idx].cutoff[field] = value;
     setNewCollege({ ...newCollege, branchesOffered: branches });
@@ -399,21 +408,38 @@ export default function AdminDashboardPage() {
               <div className="space-y-4 max-h-96 overflow-y-auto border rounded p-2">
                 {newCollege.branchesOffered?.map((branch, idx) => (
                   <div key={idx} className="grid grid-cols-1 md:grid-cols-4 gap-3 border-b pb-2 hover:bg-gray-50 rounded transition">
-                    <InputField label="Name" value={branch.name} onChange={(v) => updateBranch(idx, 'name', v)} />
-                    <InputField label="Placement Rate" type="number" value={branch.placementRate} onChange={(v) => updateBranch(idx, 'placementRate', Number(v))} />
-                    <InputField label="Avg Salary" type="number" value={branch.avgSalary} onChange={(v) => updateBranch(idx, 'avgSalary', Number(v))} />
-                    <InputField label="Max Salary" type="number" value={branch.maxSalary} onChange={(v) => updateBranch(idx, 'maxSalary', Number(v))} />
-                    <InputField label="Cutoff Gen" type="number" value={branch.cutoff.general} onChange={(v) => updateBranchCutoff(idx, 'general', Number(v))} />
-                    <InputField label="Cutoff OBC" type="number" value={branch.cutoff.obc} onChange={(v) => updateBranchCutoff(idx, 'obc', Number(v))} />
-                    <InputField label="Cutoff SC" type="number" value={branch.cutoff.sc} onChange={(v) => updateBranchCutoff(idx, 'sc', Number(v))} />
-                    <InputField label="Cutoff ST" type="number" value={branch.cutoff.st} onChange={(v) => updateBranchCutoff(idx, 'st', Number(v))} />
-                    <InputField label="Admission Trend" type="number" value={branch.admissionTrend} onChange={(v) => updateBranch(idx, 'admissionTrend', Number(v))} />
-                    <InputField label="Industry Growth" type="number" value={branch.industryGrowth} onChange={(v) => updateBranch(idx, 'industryGrowth', Number(v))} />
+                    <div className="col-span-full">
+                      <InputField label="Branch Name" value={branch.name} onChange={(v) => updateBranch(idx, 'name', v)} />
+                    </div>
+                    <InputField label="Placement Rate (%)" type="number" value={branch.placementRate} onChange={(v) => updateBranch(idx, 'placementRate', Number(v))} />
+                    <InputField label="Avg Salary (₹)" type="number" value={branch.avgSalary} onChange={(v) => updateBranch(idx, 'avgSalary', Number(v))} />
+                    <InputField label="Max Salary (₹)" type="number" value={branch.maxSalary} onChange={(v) => updateBranch(idx, 'maxSalary', Number(v))} />
+                    <InputField label="Admission Trend" type="number" step="0.01" value={branch.admissionTrend} onChange={(v) => updateBranch(idx, 'admissionTrend', Number(v))} />
+                    <InputField label="Industry Growth" type="number" step="0.01" value={branch.industryGrowth} onChange={(v) => updateBranch(idx, 'industryGrowth', Number(v))} />
                     <div className="flex items-center space-x-2">
                       <Label>Is Booming?</Label>
                       <input type="checkbox" checked={branch.isBooming} onChange={(e) => updateBranch(idx, 'isBooming', e.target.checked)} />
                     </div>
-                    <Button type="button" variant="destructive" onClick={() => removeBranch(idx)}>Remove Branch</Button>
+                    
+                    {/* All Category Cutoffs */}
+                    <div className="col-span-full border-t pt-3 mt-2">
+                      <p className="font-semibold text-sm mb-2">Cutoff Ranks by Category</p>
+                      <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                        {CATEGORIES.map(cat => (
+                          <InputField 
+                            key={cat}
+                            label={`${cat}`} 
+                            type="number" 
+                            value={branch.cutoff[cat] || 0} 
+                            onChange={(v) => updateBranchCutoff(idx, cat, Number(v))} 
+                          />
+                        ))}
+                      </div>
+                    </div>
+                    
+                    <div className="col-span-full">
+                      <Button type="button" variant="destructive" className="w-full" onClick={() => removeBranch(idx)}>Remove Branch</Button>
+                    </div>
                   </div>
                 ))}
               </div>
@@ -516,13 +542,16 @@ export default function AdminDashboardPage() {
                               Avg Salary: <span className="font-semibold text-blue-600">₹{branch.avgSalary.toLocaleString()}</span> |
                               Max Salary: <span className="font-semibold text-blue-800">₹{branch.maxSalary.toLocaleString()}</span>
                             </p>
-                            <p className="text-sm">
-                              Cutoff:
-                              <span className="bg-blue-100 text-blue-700 px-1 rounded ml-1">Gen {branch.cutoff.general}</span>
-                              <span className="bg-green-100 text-green-700 px-1 rounded ml-1">OBC {branch.cutoff.obc}</span>
-                              <span className="bg-yellow-100 text-yellow-700 px-1 rounded ml-1">SC {branch.cutoff.sc}</span>
-                              <span className="bg-red-100 text-red-700 px-1 rounded ml-1">ST {branch.cutoff.st}</span>
-                            </p>
+                            <div className="text-sm mt-1">
+                              <p className="font-semibold text-gray-700 mb-1">Cutoff Ranks:</p>
+                              <div className="flex flex-wrap gap-1">
+                                {Object.entries(branch.cutoff).map(([cat, rank]) => (
+                                  <span key={cat} className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded text-xs">
+                                    {cat}: {rank}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
                             <p className="text-sm text-purple-700">
                               Admission Trend: {(branch.admissionTrend * 100).toFixed(1)}% |
                               Industry Growth: {(branch.industryGrowth * 100).toFixed(1)}% |
