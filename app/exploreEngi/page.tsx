@@ -15,7 +15,7 @@ export default function ExploreEngiPage() {
         </CardHeader>
         <CardContent>
           <p className="text-gray-600 mb-4">
-            This page is under construction. Please use the Explore page to view all colleges.
+            This page is under construction. Please use the Explore page to view all engineering colleges.
           </p>
           <Button onClick={() => router.push('/explore')}>
             Go to Explore Page
