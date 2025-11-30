@@ -49,15 +49,15 @@
     "cmdk": "^1.0.0",
     "date-fns": "^3.6.0",
     "embla-carousel-react": "^8.3.0",
-    "eslint": "8.49.0",
+    "eslint": "^8.57.0",
     "eslint-config-next": "13.5.1",
     "input-otp": "^1.2.4",
     "jsonwebtoken": "^9.0.2",
     "lucide-react": "^0.446.0",
     "mongoose": "^8.18.2",
-    "next": "13.5.1",
+    "next": "^14.2.0",
     "next-themes": "^0.3.0",
-    "postcss": "8.4.30",
+    "postcss": "^8.4.31",
     "react": "18.2.0",
     "react-day-picker": "^8.10.1",
     "react-dom": "18.2.0",
@@ -71,5 +71,9 @@
     "typescript": "5.2.2",
     "vaul": "^0.9.9",
     "zod": "^3.23.8"
+  },
+  "devDependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10"
   }
 }

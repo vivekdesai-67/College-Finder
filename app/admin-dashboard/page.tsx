@@ -53,6 +53,7 @@ const InputField = ({
   required = false,
   min,
   max,
+  step,
 }: {
   label: string;
   value: string | number | '';
@@ -61,6 +62,7 @@ const InputField = ({
   required?: boolean;
   min?: number;
   max?: number;
+  step?: string;
 }) => (
   <div className="flex flex-col">
     <Label>{label}</Label>
@@ -71,6 +73,7 @@ const InputField = ({
       required={required}
       min={min}
       max={max}
+      step={step}
     />
   </div>
 );

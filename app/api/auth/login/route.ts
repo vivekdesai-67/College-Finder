@@ -16,7 +16,7 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    let user;
+    let user: any;
     if (userType === 'admin') {
       user = await Admin.findOne({ username });
     } else {
@@ -30,8 +30,9 @@ export async function POST(request: NextRequest) {
       );
     }
 
+    const userId = user._id.toString();
     const token = signToken({ 
-      id: user._id, 
+      id: userId, 
       username: user.username, 
       role: userType === 'admin' ? 'admin' : 'student' 
     });
@@ -39,10 +40,10 @@ export async function POST(request: NextRequest) {
     const responseData = {
       token,
       user: {
-        id: user._id,
+        id: userId,
         username: user.username,
         email: user.email || null,
-        role: userType === 'admin' ? 'admin' : 'student',
+        role: userType === 'admin' ? 'admin' as const : 'student' as const,
         profileComplete: user.profileComplete || false
       }
     };

@@ -185,24 +185,24 @@ const CollegeShowPage = () => {
 
   {/* College Stats */}
   <div className="flex flex-wrap gap-4">
-    <Badge variant="filled" className="bg-gradient-to-r from-green-400 to-teal-500 text-white flex items-center gap-1">
+    <Badge className="bg-gradient-to-r from-green-400 to-teal-500 text-white flex items-center gap-1">
       <IndianRupee className="h-3 w-3" /> {formatFees(college.fees)} / year
     </Badge>
-    <Badge variant="filled" className="bg-gradient-to-r from-blue-400 to-indigo-500 text-white flex items-center gap-1">
+    <Badge className="bg-gradient-to-r from-blue-400 to-indigo-500 text-white flex items-center gap-1">
       <Building className="h-3 w-3" /> {college.type || "Private"}
     </Badge>
     {college.established && (
-      <Badge variant="filled" className="bg-gradient-to-r from-purple-400 to-pink-500 text-white flex items-center gap-1">
+      <Badge className="bg-gradient-to-r from-purple-400 to-pink-500 text-white flex items-center gap-1">
         <Calendar className="h-3 w-3" /> Est. {college.established}
       </Badge>
     )}
     {college.accreditation && (
-      <Badge variant="filled" className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white flex items-center gap-1">
+      <Badge className="bg-gradient-to-r from-yellow-400 to-orange-500 text-white flex items-center gap-1">
         <Award className="h-3 w-3" /> {college.accreditation}
       </Badge>
     )}
     {college.infraRating && (
-      <Badge variant="filled" className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white flex items-center gap-1">
+      <Badge className="bg-gradient-to-r from-yellow-400 to-amber-500 text-white flex items-center gap-1">
         <Star className="h-3 w-3 text-yellow-400 fill-current" /> {college.infraRating}/5
       </Badge>
     )}
@@ -243,7 +243,6 @@ const CollegeShowPage = () => {
                 return (
                   <Badge
                     key={category}
-                    variant="filled"
                     className={`px-2 py-1 rounded ${color} text-xs font-semibold`}
                     title={`${category}: ${value}`}
                   >
