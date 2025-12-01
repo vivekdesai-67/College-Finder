@@ -124,10 +124,8 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let decoded;
-    try {
-      decoded = verifyToken(token);
-    } catch {
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
@@ -172,10 +170,8 @@ export async function PUT(request: NextRequest) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    let decoded;
-    try {
-      decoded = verifyToken(token);
-    } catch {
+    const decoded = verifyToken(token);
+    if (!decoded || !decoded.id) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
