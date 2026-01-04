@@ -89,6 +89,15 @@ interface ICutoff {
   [key: string]: number | null; // e.g. { "GM": 500, "2AG": 1200, ... }
 }
 
+interface IHistoricalData {
+  year: number;
+  cutoff: ICutoff;
+  placementRate?: number;
+  avgSalary?: number;
+  studentsAdmitted?: number;
+  studentsPlaced?: number;
+}
+
 interface IBranch {
   name: string;
   cutoff: ICutoff;
@@ -98,9 +107,11 @@ interface IBranch {
   admissionTrend?: number;
   industryGrowth?: number;
   isBooming?: boolean;
+  historicalData?: IHistoricalData[]; // Last 5 years of data
 }
 
 export interface ICollege extends Document {
+  code?: string;
   name: string;
   location: string;
   fees: number;
@@ -126,6 +137,19 @@ const cutoffSchema = new mongoose.Schema(
   { _id: false }
 );
 
+const historicalDataSchema = new mongoose.Schema({
+  year: { type: Number, required: true },
+  cutoff: {
+    type: Map,
+    of: Number,
+    required: true,
+  },
+  placementRate: { type: Number },
+  avgSalary: { type: Number },
+  studentsAdmitted: { type: Number },
+  studentsPlaced: { type: Number },
+}, { _id: false });
+
 const branchSchema = new mongoose.Schema<IBranch>({
   name: { type: String, required: true },
   cutoff: {
@@ -139,10 +163,12 @@ const branchSchema = new mongoose.Schema<IBranch>({
   admissionTrend: { type: Number, default: 0.5 },
   industryGrowth: { type: Number, default: 0.6 },
   isBooming: { type: Boolean, default: false },
+  historicalData: [historicalDataSchema], // Array of historical records
 });
 
 const collegeSchema = new mongoose.Schema<ICollege>(
   {
+    code: { type: String, unique: true, sparse: true },
     name: { type: String, required: true },
     location: { type: String, required: true },
     fees: { type: Number, required: true },

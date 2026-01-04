@@ -5,6 +5,7 @@ import Link from 'next/link';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { GraduationCap, Users, Building, TrendingUp, Search, Heart, Shield, ArrowRight, Sparkles } from 'lucide-react';
+import { useUser } from '@clerk/nextjs';
 
 const stats = [
   { icon: Building, label: 'Engineering Colleges', value: '250+', color: 'text-blue-600' },
@@ -35,14 +36,7 @@ const features = [
 ];
 
 export default function HomePage() {
-  const [user, setUser] = useState<any>(null);
-
-  useEffect(() => {
-    const userData = localStorage.getItem('user');
-    if (userData) {
-      setUser(JSON.parse(userData));
-    }
-  }, []);
+  const { isSignedIn, user } = useUser();
 
   return (
     // <div className="min-h-screen">
@@ -313,9 +307,9 @@ export default function HomePage() {
           `}</style>
           
           <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            {!user ? (
+            {!isSignedIn ? (
               <>
-                <Link href="/register">
+                <Link href="/sign-up">
                   <button className="group relative bg-yellow-400 hover:bg-yellow-300 text-blue-900 font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-105 overflow-hidden">
                     <span className="absolute inset-0 bg-gradient-to-r from-yellow-300 to-yellow-500 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                     <span className="relative flex items-center gap-2">
@@ -325,9 +319,9 @@ export default function HomePage() {
                     </span>
                   </button>
                 </Link>
-                <Link href="/login">
+                <Link href="/sign-in">
                   <button className="group bg-white hover:bg-blue-100 text-blue-700 font-bold px-10 py-4 rounded-full shadow-md hover:shadow-xl transition-all transform hover:-translate-y-1 hover:scale-105">
-                    Login
+                    Sign In
                   </button>
                 </Link>
               </>
@@ -389,8 +383,8 @@ export default function HomePage() {
           <p className="text-xl text-white/90 mb-8 max-w-2xl mx-auto">
             Join thousands of students who found their perfect engineering college with our platform.
           </p>
-          {!user ? (
-            <Link href="/register">
+          {!isSignedIn ? (
+            <Link href="/sign-up">
               <button className="group relative bg-white text-blue-600 font-bold px-10 py-4 rounded-full shadow-lg hover:shadow-2xl transition-all transform hover:-translate-y-1 hover:scale-105 overflow-hidden">
                 <span className="absolute inset-0 bg-gradient-to-r from-blue-50 to-purple-50 opacity-0 group-hover:opacity-100 transition-opacity"></span>
                 <span className="relative flex items-center gap-2">

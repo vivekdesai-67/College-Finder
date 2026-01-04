@@ -27,24 +27,29 @@ interface IAdmin extends Document {
   username: string;
   password: string;
   role: string;
+  clerkId?: string; // Optional Clerk ID for Clerk-authenticated admins
+  email?: string; // Optional email for identification
   comparePassword(password: string): Promise<boolean>;
 }
 
 const adminSchema = new mongoose.Schema<IAdmin>({
   username: { type: String, required: true, unique: true },
-  password: { type: String, required: true },
-  role: { type: String, default: 'admin' }
+  password: { type: String, required: false }, // Optional for Clerk users
+  role: { type: String, default: 'admin' },
+  clerkId: { type: String, unique: true, sparse: true }, // Clerk user ID
+  email: { type: String, unique: true, sparse: true } // Email for identification
 }, {
   timestamps: true
 });
 
 adminSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+  if (!this.isModified('password') || !this.password) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
 adminSchema.methods.comparePassword = async function (password: string) {
+  if (!this.password) return false;
   return bcrypt.compare(password, this.password);
 };
 

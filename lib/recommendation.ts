@@ -389,33 +389,95 @@ export function getRecommendations(colleges: College[], student: Student): Recom
   console.log('Student category:', student.category);
   console.log('Student preferred branches:', student.preferredBranch);
 
+  // Normalize preferred branches to flat array of lowercase strings
+  const preferredBranches: string[] = Array.isArray(student.preferredBranch)
+    ? student.preferredBranch.flat().filter(pb => typeof pb === 'string').map(pb => pb.toLowerCase())
+    : [];
+  
+  const hasPreferredBranches = preferredBranches.length > 0;
+  console.log('Normalized preferred branches:', preferredBranches);
+  console.log('Has preferred branches:', hasPreferredBranches);
+
   for (const college of colleges) {
     for (const branch of college.branchesOffered) {
+      // ✅ FILTER: Only include branches that match user's preferred branches
+      if (hasPreferredBranches) {
+        const branchNameLower = branch.name.toLowerCase();
+        
+        // Normalize branch name for better matching
+        const normalizeBranchName = (name: string) => {
+          return name
+            .toLowerCase()
+            .replace(/\s+&\s+/g, ' ')
+            .replace(/\s+and\s+/g, ' ')
+            .replace(/\s+/g, ' ')
+            .trim();
+        };
+        
+        const normalizedBranchName = normalizeBranchName(branch.name);
+        
+        const isPreferred = preferredBranches.some(pb => {
+          const normalizedPreferred = normalizeBranchName(pb);
+          
+          // Check for various matching patterns
+          const exactMatch = normalizedBranchName === normalizedPreferred;
+          const containsMatch = normalizedBranchName.includes(normalizedPreferred) || normalizedPreferred.includes(normalizedBranchName);
+          
+          // Check for keyword matches (e.g., "computer" matches "computer science engineering")
+          const keywords = normalizedPreferred.split(' ').filter(w => w.length > 3);
+          const keywordMatch = keywords.length > 0 && keywords.every(kw => normalizedBranchName.includes(kw));
+          
+          const matches = exactMatch || containsMatch || keywordMatch;
+          
+          if (matches && recommendations.length < 10) {
+            console.log(`✅ Branch "${branch.name}" matches preferred "${pb}" (normalized: "${normalizedBranchName}" vs "${normalizedPreferred}")`);
+          }
+          
+          return matches;
+        });
+        
+        if (!isPreferred) {
+          continue; // Skip this branch if it's not in preferred list
+        }
+      }
+      
       const boomFlag = calculateBoomFlag(branch);
 
-      // Category cutoff fallback
-      const originalCutoff =
-        branch.cutoff[student.category as keyof typeof branch.cutoff] ??
-        branch.cutoff.general ??
-        100000; // large number to ensure eligibility
+      // Category cutoff fallback - try multiple fallbacks
+      let originalCutoff = branch.cutoff[student.category as keyof typeof branch.cutoff];
+      
+      // If category not found, try similar categories or GM
+      if (!originalCutoff || originalCutoff === 0) {
+        // Try GM (General Merit) as fallback
+        originalCutoff = branch.cutoff['GM'] || branch.cutoff['GMK'] || branch.cutoff['GMR'];
+      }
+      
+      // If still not found, try any available category
+      if (!originalCutoff || originalCutoff === 0) {
+        const availableCutoffs = Object.values(branch.cutoff).filter(c => c && c > 0);
+        if (availableCutoffs.length > 0) {
+          originalCutoff = Math.min(...availableCutoffs); // Use the most competitive cutoff
+        } else {
+          originalCutoff = 100000; // Default high number
+        }
+      }
 
       const adjustedCutoff = adjustCutoff(originalCutoff, boomFlag);
       
       const isEligible = checkEligibility(student.rank, adjustedCutoff);
+      
+      // Debug logging for first few branches
+      if (recommendations.length < 3) {
+        console.log(`Branch: ${branch.name}, Original cutoff: ${originalCutoff}, Adjusted: ${adjustedCutoff}, Eligible: ${isEligible}, Student rank: ${student.rank}`);
+        console.log(`Available categories:`, Object.keys(branch.cutoff));
+      }
 
       if (isEligible) {
         let eligibilityScore = calculateEligibilityScore(student.rank, adjustedCutoff);
 
-        // Ensure preferredBranch is a flat array of strings
-        const preferredBranches: string[] = Array.isArray(student.preferredBranch)
-          ? student.preferredBranch.flat().filter(pb => typeof pb === 'string')
-          : [];
-
-        if (
-          preferredBranches.length > 0 &&
-          preferredBranches.some(pb => pb.toLowerCase() === branch.name.toLowerCase())
-        ) {
-          eligibilityScore *= 1.1; // 10% boost
+        // Give a small boost to preferred branches (they're already filtered)
+        if (hasPreferredBranches) {
+          eligibilityScore *= 1.05; // 5% boost for being a preferred branch
         }
 
         recommendations.push({

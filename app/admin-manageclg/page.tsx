@@ -365,10 +365,7 @@ export default function AdminManageColleges() {
   const fetchColleges = async () => {
     try {
       setLoading(true);
-      const token = localStorage.getItem('token');
-      const res = await fetch('/api/admin/colleges', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch('/api/admin/colleges');
       const data = await res.json();
       setColleges(data.colleges || data || []);
     } catch (err) {
@@ -385,10 +382,8 @@ export default function AdminManageColleges() {
   const handleDelete = async (collegeId: string) => {
     if (!confirm('Are you sure you want to delete this college?')) return;
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`/api/admin/colleges/${collegeId}`, {
         method: 'DELETE',
-        headers: { Authorization: `Bearer ${token}` },
       });
       if (res.ok) {
         toast.success('College deleted successfully');
@@ -404,10 +399,9 @@ export default function AdminManageColleges() {
   const handleUpdate = async (collegeId: string) => {
     const formData = editingColleges[collegeId];
     try {
-      const token = localStorage.getItem('token');
       const res = await fetch(`/api/admin/colleges/${collegeId}`, {
         method: 'PUT',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
       });
       if (!res.ok) throw new Error('Failed to update college');

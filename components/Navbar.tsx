@@ -1,48 +1,18 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
-import { useRouter, usePathname } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
-import { GraduationCap, User, LogOut, Menu, X } from 'lucide-react';
+import { GraduationCap, Menu, X } from 'lucide-react';
+import { SignInButton, SignUpButton, UserButton, useUser } from '@clerk/nextjs';
+import { useRoleCheck } from '@/hooks/useRoleAuth';
 
 export default function Navbar() {
-  const [user, setUser] = useState<any>(null);
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const router = useRouter();
-  const pathname = usePathname();
-
-  useEffect(() => {
-    // Check user authentication on mount and route change
-    const checkAuth = () => {
-      const token = localStorage.getItem('token');
-      const userData = localStorage.getItem('user');
-      
-      if (token && userData) {
-        try {
-          setUser(JSON.parse(userData));
-        } catch (error) {
-          console.error('Error parsing user data:', error);
-          localStorage.removeItem('token');
-          localStorage.removeItem('user');
-          setUser(null);
-        }
-      } else {
-        setUser(null);
-      }
-    };
-
-    checkAuth();
-  }, [pathname]);
-
-  const handleLogout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('user');
-    setUser(null);
-    router.push('/');
-  };
-
-  const isAdmin = user?.role === 'admin';
+  const { isSignedIn, user } = useUser();
+  const { userRole, isAdmin, isStudent } = useRoleCheck();
 
   return (
     <nav className="bg-white shadow-lg border-b-2 border-blue-50">
@@ -57,9 +27,25 @@ export default function Navbar() {
 
           {/* Desktop Menu */}
           <div className="hidden md:flex items-center space-x-6">
-            {user ? (
+            {isSignedIn ? (
               <>
-                {!isAdmin && (
+                {/* Admin Navigation */}
+                {isAdmin && (
+                  <>
+                    <Link href="/admin-dashboard" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                      Admin Dashboard
+                    </Link>
+                    <Link href="/admin-manageclg" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                      Manage Colleges
+                    </Link>
+                    <Link href="/admin-feedback" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                      View Feedback
+                    </Link>
+                  </>
+                )}
+
+                {/* Student Navigation */}
+                {isStudent && (
                   <>
                     <Link href="/dashboard" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
                       Dashboard
@@ -67,51 +53,66 @@ export default function Navbar() {
                     <Link href="/recommendations" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
                       Recommendations
                     </Link>
+                    <Link href="/predictions" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                      Predictions
+                    </Link>
+                    <Link href="/compare" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                      Compare
+                    </Link>
                     <Link href="/explore" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
                       Explore
                     </Link>
                     <Link href="/wishlist" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
                       Wishlist
                     </Link>
-                  </>
-                )}
-                {isAdmin && (
-                  <>
-                    <Link href="/admin-dashboard" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                      Admin Panel
-                    </Link>
-                    <Link href="/admin-manageclg" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
-                      Manage Colleges
+                    <Link href="/feedback" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                      Feedback
                     </Link>
                   </>
                 )}
+
+                {/* Common explore link for all users */}
+                {!userRole && (
+                  <Link href="/explore" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                    Explore Colleges
+                  </Link>
+                )}
+
                 <div className="flex items-center space-x-3">
-                  <div className="flex items-center space-x-2 px-3 py-2 rounded-lg bg-blue-50">
-                    <User className="h-4 w-4 text-blue-600" />
-                    <span className="text-sm font-medium text-blue-900">{user.username}</span>
-                  </div>
-                  <Button
-                    onClick={handleLogout}
-                    variant="ghost"
-                    size="sm"
-                    className="text-gray-700 hover:text-red-600"
-                  >
-                    <LogOut className="h-4 w-4" />
-                  </Button>
+                  <UserButton 
+                    afterSignOutUrl="/"
+                    appearance={{
+                      elements: {
+                        avatarBox: "h-10 w-10"
+                      }
+                    }}
+                  />
+                  {userRole && (
+                    <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                      isAdmin 
+                        ? 'bg-red-100 text-red-700' 
+                        : 'bg-blue-100 text-blue-700'
+                    }`}>
+                      {userRole.toUpperCase()}
+                    </span>
+                  )}
                 </div>
               </>
             ) : (
               <div className="flex items-center space-x-4">
-                <Link href="/login">
+                <Link href="/explore" className="text-gray-700 hover:text-blue-600 transition-colors font-medium">
+                  Explore Colleges
+                </Link>
+                <SignInButton mode="modal">
                   <Button variant="ghost" className="text-gray-700 hover:text-blue-600">
-                    Login
+                    Sign In
                   </Button>
-                </Link>
-                <Link href="/register">
+                </SignInButton>
+                <SignUpButton mode="modal">
                   <Button className="bg-blue-600 hover:bg-blue-700">
-                    Register
+                    Sign Up
                   </Button>
-                </Link>
+                </SignUpButton>
               </div>
             )}
           </div>
@@ -133,9 +134,37 @@ export default function Navbar() {
         {isMenuOpen && (
           <div className="md:hidden">
             <div className="px-2 pt-2 pb-3 space-y-1 border-t border-gray-200">
-              {user ? (
+              {isSignedIn ? (
                 <>
-                  {!isAdmin && (
+                  {/* Admin Mobile Navigation */}
+                  {isAdmin && (
+                    <>
+                      <Link
+                        href="/admin-dashboard"
+                        className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Admin Dashboard
+                      </Link>
+                      <Link
+                        href="/admin-manageclg"
+                        className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Manage Colleges
+                      </Link>
+                      <Link
+                        href="/admin-feedback"
+                        className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        View Feedback
+                      </Link>
+                    </>
+                  )}
+
+                  {/* Student Mobile Navigation */}
+                  {isStudent && (
                     <>
                       <Link
                         href="/dashboard"
@@ -152,6 +181,20 @@ export default function Navbar() {
                         Recommendations
                       </Link>
                       <Link
+                        href="/predictions"
+                        className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Predictions
+                      </Link>
+                      <Link
+                        href="/compare"
+                        className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+                        onClick={() => setIsMenuOpen(false)}
+                      >
+                        Compare
+                      </Link>
+                      <Link
                         href="/explore"
                         className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
                         onClick={() => setIsMenuOpen(false)}
@@ -165,57 +208,71 @@ export default function Navbar() {
                       >
                         Wishlist
                       </Link>
-                    </>
-                  )}
-                  {isAdmin && (
-                    <>
                       <Link
-                        href="/admin"
+                        href="/feedback"
                         className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
                         onClick={() => setIsMenuOpen(false)}
                       >
-                        Admin Panel
-                      </Link>
-                      <Link
-                        href="/admin/colleges"
-                        className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
-                        onClick={() => setIsMenuOpen(false)}
-                      >
-                        Manage Colleges
+                        Feedback
                       </Link>
                     </>
                   )}
-                  <div className="px-3 py-2 flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <User className="h-4 w-4 text-blue-600" />
-                      <span className="text-sm font-medium text-gray-900">{user.username}</span>
-                    </div>
-                    <Button
-                      onClick={handleLogout}
-                      variant="ghost"
-                      size="sm"
-                      className="text-red-600 hover:text-red-700"
+
+                  {!userRole && (
+                    <Link
+                      href="/explore"
+                      className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+                      onClick={() => setIsMenuOpen(false)}
                     >
-                      <LogOut className="h-4 w-4" />
-                    </Button>
+                      Explore Colleges
+                    </Link>
+                  )}
+
+                  <div className="px-3 py-2 flex items-center justify-between">
+                    <UserButton 
+                      afterSignOutUrl="/"
+                      appearance={{
+                        elements: {
+                          avatarBox: "h-10 w-10"
+                        }
+                      }}
+                    />
+                    {userRole && (
+                      <span className={`px-2 py-1 text-xs font-medium rounded-full ${
+                        isAdmin 
+                          ? 'bg-red-100 text-red-700' 
+                          : 'bg-blue-100 text-blue-700'
+                      }`}>
+                        {userRole.toUpperCase()}
+                      </span>
+                    )}
                   </div>
                 </>
               ) : (
                 <>
                   <Link
-                    href="/login"
+                    href="/explore"
                     className="block px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
                     onClick={() => setIsMenuOpen(false)}
                   >
-                    Login
+                    Explore Colleges
                   </Link>
-                  <Link
-                    href="/register"
-                    className="block px-3 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md font-medium text-center"
-                    onClick={() => setIsMenuOpen(false)}
-                  >
-                    Register
-                  </Link>
+                  <SignInButton mode="modal">
+                    <button
+                      className="block w-full text-left px-3 py-2 text-gray-700 hover:text-blue-600 hover:bg-blue-50 rounded-md font-medium"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Sign In
+                    </button>
+                  </SignInButton>
+                  <SignUpButton mode="modal">
+                    <button
+                      className="block w-full px-3 py-2 text-white bg-blue-600 hover:bg-blue-700 rounded-md font-medium text-center"
+                      onClick={() => setIsMenuOpen(false)}
+                    >
+                      Sign Up
+                    </button>
+                  </SignUpButton>
                 </>
               )}
             </div>

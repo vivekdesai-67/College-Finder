@@ -1,0 +1,213 @@
+import { PrismaClient } from '@prisma/client';
+import * as fs from 'fs';
+import * as path from 'path';
+
+const prisma = new PrismaClient();
+
+interface CutoffData {
+  collegeCode: string;
+  collegeName: string;
+  location: string;
+  branchCode: string;
+  branchName: string;
+  category: string;
+  cutoffRank: number;
+}
+
+// Category mapping for the columns
+const CATEGORIES = [
+  '1G', '1K', '1R',
+  '2AG', '2AK', '2AR',
+  '2BG', '2BK', '2BR',
+  '3AG', '3AK', '3AR',
+  '3BG', '3BK', '3BR',
+  'GM', 'GMK', 'GMR',
+  'SCG', 'SCK', 'SCR',
+  'STG', 'STK', 'STR'
+];
+
+function parseKCET2023Data(rawData: string): CutoffData[] {
+  const cutoffData: CutoffData[] = [];
+  
+  // Split by college entries (look for pattern like "1E001")
+  const collegeBlocks = rawData.split(/(?=\d+E\d+)/);
+  
+  for (const block of collegeBlocks) {
+    if (!block.trim()) continue;
+    
+    const lines = block.split('\n').filter(l => l.trim());
+    if (lines.length === 0) continue;
+    
+    // First line should contain college info
+    const firstLine = lines[0];
+    const collegeMatch = firstLine.match(/^(\d+E\d+)(.+?)1G1K1R/);
+    
+    if (!collegeMatch) continue;
+    
+    const collegeCode = collegeMatch[1];
+    const collegeInfo = collegeMatch[2];
+    
+    // Parse college name and location
+    let collegeName = '';
+    let location = '';
+    
+    // Look for location patterns (usually ends with district or city name)
+    const locationMatch = collegeInfo.match(/(.+?)(Bangalore|Mysore|Mangalore|Belgaum|Hubli|Davangere|Tumkur|Hassan|Gulbarga|Bidar|Raichur|Bellary|Shimoga|Udupi|Kodagu|Mandya|Chickmagalur|Chikkaballapur|Kolar|Ramanagara|Bagalkot|Gadag|Haveri|Koppal|Dharwad|Uttara Kannada|Dakshina Kannada|Chamarajanagar|Chitradurga|Yadgir|Vijapur|Kalburgi|D\.?K\.?|PUBLIC UNIV\.|PRIVATE|AIDED)/i);
+    
+    if (locationMatch) {
+      collegeName = locationMatch[1].trim();
+      location = locationMatch[2].trim();
+    } else {
+      collegeName = collegeInfo.trim();
+    }
+    
+    const currentCollege = { code: collegeCode, name: collegeName, location };
+    
+    // Process branch lines
+    for (let i = 1; i < lines.length; i++) {
+      const line = lines[i];
+      
+      // Skip header repetitions
+      if (line.includes('1G1K1R2AG2AK') || line.includes('ENGINEERING CUTOFF')) continue;
+      
+      // Branch line pattern: 2-letter code followed by branch name and ranks
+      const branchMatch = line.match(/^([A-Z]{2})\s+(.+?)(\d+|--)/);
+      
+      if (branchMatch) {
+        const branchCode = branchMatch[1];
+        let branchName = branchMatch[2].trim();
+        
+        // Clean up branch name (remove trailing numbers/dashes)
+        branchName = branchName.replace(/[\d\-\s]+$/, '').trim();
+        
+        // Extract all numbers and -- from the line
+        const rankPattern = /(\d+|--)/g;
+        const allMatches = line.match(rankPattern) || [];
+        
+        // The last 24 values should be the category ranks
+        if (allMatches.length >= 24) {
+          const ranks = allMatches.slice(-24);
+          
+          // Map to categories
+          ranks.forEach((rank, index) => {
+            if (rank !== '--' && !isNaN(parseInt(rank))) {
+              cutoffData.push({
+                collegeCode: currentCollege.code,
+                collegeName: currentCollege.name,
+                location: currentCollege.location,
+                branchCode,
+                branchName,
+                category: CATEGORIES[index],
+                cutoffRank: parseInt(rank)
+              });
+            }
+          });
+        }
+      }
+    }
+  }
+  
+  return cutoffData;
+}
+
+async function importCutoffData(cutoffData: CutoffData[]) {
+  console.log(`Starting import of ${cutoffData.length} cutoff records...`);
+  
+  let imported = 0;
+  let errors = 0;
+  
+  for (const data of cutoffData) {
+    try {
+      // Find or create college
+      let college = await prisma.college.findFirst({
+        where: { name: { contains: data.collegeName.substring(0, 20) } }
+      });
+      
+      if (!college) {
+        console.log(`Creating college: ${data.collegeName}`);
+        college = await prisma.college.create({
+          data: {
+            name: data.collegeName,
+            location: data.location,
+            type: 'Engineering',
+            established: 2000,
+            affiliation: 'VTU',
+            approvedIntake: 0,
+            facilities: [],
+            courses: []
+          }
+        });
+      }
+      
+      // Find or create branch
+      let branch = await prisma.branch.findFirst({
+        where: {
+          collegeId: college.id,
+          code: data.branchCode
+        }
+      });
+      
+      if (!branch) {
+        branch = await prisma.branch.create({
+          data: {
+            name: data.branchName,
+            code: data.branchCode,
+            duration: 4,
+            degree: 'B.E.',
+            collegeId: college.id,
+            seats: 60
+          }
+        });
+      }
+      
+      // Create cutoff record
+      await prisma.cutoff.create({
+        data: {
+          year: 2023,
+          round: 1,
+          category: data.category,
+          openingRank: data.cutoffRank,
+          closingRank: data.cutoffRank,
+          branchId: branch.id
+        }
+      });
+      
+      imported++;
+      
+      if (imported % 100 === 0) {
+        console.log(`Imported ${imported} records...`);
+      }
+    } catch (error) {
+      errors++;
+      console.error(`Error importing ${data.collegeCode} - ${data.branchCode}:`, error);
+    }
+  }
+  
+  console.log(`\nImport complete!`);
+  console.log(`Successfully imported: ${imported}`);
+  console.log(`Errors: ${errors}`);
+}
+
+async function main() {
+  try {
+    // Read the raw data file
+    const dataPath = path.join(process.cwd(), 'kcet-2023-data.txt');
+    const rawData = fs.readFileSync(dataPath, 'utf-8');
+    
+    console.log('Parsing KCET 2023 data...');
+    const cutoffData = parseKCET2023Data(rawData);
+    
+    console.log(`Parsed ${cutoffData.length} cutoff records`);
+    console.log('Sample:', cutoffData.slice(0, 3));
+    
+    // Import to database
+    await importCutoffData(cutoffData);
+    
+  } catch (error) {
+    console.error('Error:', error);
+  } finally {
+    await prisma.$disconnect();
+  }
+}
+
+main();

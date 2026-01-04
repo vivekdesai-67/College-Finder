@@ -1,0 +1,288 @@
+/**
+ * Validation script for KCET 2022 data
+ * Checks data quality, completeness, and consistency
+ */
+
+import { PrismaClient } from '@prisma/client';
+
+const prisma = new PrismaClient();
+
+interface ValidationResult {
+  passed: boolean;
+  errors: string[];
+  warnings: string[];
+  stats: {
+    totalColleges: number;
+    totalCutoffs: number;
+    branches: Set<string>;
+    categories: Set<string>;
+    avgRank: number;
+    minRank: number;
+    maxRank: number;
+  };
+}
+
+async function validate2022Data(): Promise<ValidationResult> {
+  const result: ValidationResult = {
+    passed: true,
+    errors: [],
+    warnings: [],
+    stats: {
+      totalColleges: 0,
+      totalCutoffs: 0,
+      branches: new Set(),
+      categories: new Set(),
+      avgRank: 0,
+      minRank: Infinity,
+      maxRank: 0
+    }
+  };
+
+  try {
+    console.log('🔍 Validating 2022 KCET data...\n');
+
+    // Fetch all 2022 cutoffs
+    const cutoffs = await prisma.cutoff.findMany({
+      where: { year: 2022 },
+      include: { college: true }
+    });
+
+    if (cutoffs.length === 0) {
+      result.errors.push('No 2022 data found in database');
+      result.passed = false;
+      return result;
+    }
+
+    result.stats.totalCutoffs = cutoffs.length;
+
+    // Collect statistics
+    const collegeIds = new Set<string>();
+    let totalRank = 0;
+
+    for (const cutoff of cutoffs) {
+      collegeIds.add(cutoff.collegeId);
+      result.stats.branches.add(cutoff.branch);
+      result.stats.categories.add(cutoff.category);
+      
+      totalRank += cutoff.rank;
+      result.stats.minRank = Math.min(result.stats.minRank, cutoff.rank);
+      result.stats.maxRank = Math.max(result.stats.maxRank, cutoff.rank);
+
+      // Validate rank range
+      if (cutoff.rank < 1 || cutoff.rank > 200000) {
+        result.warnings.push(
+          `Unusual rank ${cutoff.rank} for ${cutoff.college.name} - ${cutoff.branch}`
+        );
+      }
+
+      // Validate category format
+      if (!isValidCategory(cutoff.category)) {
+        result.warnings.push(
+          `Invalid category format: ${cutoff.category} at ${cutoff.college.name}`
+        );
+      }
+    }
+
+    result.stats.totalColleges = collegeIds.size;
+    result.stats.avgRank = totalRank / cutoffs.length;
+
+    // Check for expected colleges
+    const expectedTopColleges = [
+      'E001', // UVCE
+      'E003', // BMSCE
+      'E005', // RVCE
+      'E006', // MSRIT
+      'E009'  // PESU
+    ];
+
+    for (const code of expectedTopColleges) {
+      const college = await prisma.college.findFirst({
+        where: { code },
+        include: { cutoffs: { where: { year: 2022 } } }
+      });
+
+      if (!college) {
+        result.errors.push(`Missing top college: ${code}`);
+        result.passed = false;
+      } else if (college.cutoffs.length === 0) {
+        result.warnings.push(`No 2022 cutoffs for ${college.name}`);
+      }
+    }
+
+    // Check for data completeness
+    const collegesWithCutoffs = await prisma.college.findMany({
+      where: {
+        cutoffs: {
+          some: { year: 2022 }
+        }
+      },
+      include: {
+        cutoffs: {
+          where: { year: 2022 }
+        }
+      }
+    });
+
+    for (const college of collegesWithCutoffs) {
+      const branches = new Set(college.cutoffs.map(c => c.branch));
+      
+      // Expect at least CS, EC, ME for engineering colleges
+      if (!branches.has('Computer Science') && !branches.has('Computers')) {
+        result.warnings.push(
+          `${college.name} missing Computer Science branch`
+        );
+      }
+    }
+
+    // Check for duplicates
+    const duplicates = await findDuplicates();
+    if (duplicates.length > 0) {
+      result.errors.push(`Found ${duplicates.length} duplicate cutoff entries`);
+      result.passed = false;
+      duplicates.slice(0, 5).forEach(dup => {
+        result.errors.push(`  - ${dup}`);
+      });
+    }
+
+    // Check for consistency with 2023 data
+    const consistency = await checkYearConsistency();
+    if (!consistency.passed) {
+      result.warnings.push(...consistency.warnings);
+    }
+
+  } catch (error) {
+    result.errors.push(`Validation error: ${error}`);
+    result.passed = false;
+  } finally {
+    await prisma.$disconnect();
+  }
+
+  return result;
+}
+
+function isValidCategory(category: string): boolean {
+  const validCategories = [
+    '1G', '1K', '1R',
+    '2AG', '2AK', '2AR', '2BG', '2BK', '2BR',
+    '3AG', '3AK', '3AR', '3BG', '3BK', '3BR',
+    'GM', 'GMK', 'GMR',
+    'SCG', 'SCK', 'SCR',
+    'STG', 'STK', 'STR'
+  ];
+  return validCategories.includes(category);
+}
+
+async function findDuplicates(): Promise<string[]> {
+  const duplicates: string[] = [];
+  
+  const cutoffs = await prisma.cutoff.findMany({
+    where: { year: 2022 },
+    include: { college: true }
+  });
+
+  const seen = new Map<string, number>();
+  
+  for (const cutoff of cutoffs) {
+    const key = `${cutoff.collegeId}-${cutoff.branch}-${cutoff.category}-${cutoff.round}`;
+    const count = (seen.get(key) || 0) + 1;
+    seen.set(key, count);
+    
+    if (count > 1) {
+      duplicates.push(
+        `${cutoff.college.name} - ${cutoff.branch} - ${cutoff.category}`
+      );
+    }
+  }
+  
+  return duplicates;
+}
+
+async function checkYearConsistency(): Promise<{ passed: boolean; warnings: string[] }> {
+  const warnings: string[] = [];
+  
+  // Compare 2022 vs 2023 data
+  const colleges = await prisma.college.findMany({
+    include: {
+      cutoffs: {
+        where: {
+          year: { in: [2022, 2023] }
+        }
+      }
+    }
+  });
+
+  for (const college of colleges) {
+    const cutoffs2022 = college.cutoffs.filter(c => c.year === 2022);
+    const cutoffs2023 = college.cutoffs.filter(c => c.year === 2023);
+    
+    if (cutoffs2022.length > 0 && cutoffs2023.length === 0) {
+      warnings.push(`${college.name} has 2022 data but no 2023 data`);
+    }
+    
+    // Check for dramatic rank changes
+    const branches2022 = new Map(cutoffs2022.map(c => [`${c.branch}-${c.category}`, c.rank]));
+    const branches2023 = new Map(cutoffs2023.map(c => [`${c.branch}-${c.category}`, c.rank]));
+    
+    for (const [key, rank2022] of branches2022) {
+      const rank2023 = branches2023.get(key);
+      if (rank2023) {
+        const change = Math.abs(rank2023 - rank2022) / rank2022;
+        if (change > 0.5) { // 50% change
+          warnings.push(
+            `Large rank change for ${college.name} ${key}: ${rank2022} → ${rank2023}`
+          );
+        }
+      }
+    }
+  }
+  
+  return {
+    passed: warnings.length === 0,
+    warnings
+  };
+}
+
+function printResults(result: ValidationResult) {
+  console.log('\n📊 Validation Results\n');
+  console.log('='.repeat(50));
+  
+  console.log('\n📈 Statistics:');
+  console.log(`  Total Colleges: ${result.stats.totalColleges}`);
+  console.log(`  Total Cutoffs: ${result.stats.totalCutoffs}`);
+  console.log(`  Unique Branches: ${result.stats.branches.size}`);
+  console.log(`  Unique Categories: ${result.stats.categories.size}`);
+  console.log(`  Average Rank: ${Math.round(result.stats.avgRank)}`);
+  console.log(`  Rank Range: ${result.stats.minRank} - ${result.stats.maxRank}`);
+  
+  if (result.errors.length > 0) {
+    console.log('\n❌ Errors:');
+    result.errors.forEach(error => console.log(`  - ${error}`));
+  }
+  
+  if (result.warnings.length > 0) {
+    console.log('\n⚠️  Warnings:');
+    result.warnings.slice(0, 10).forEach(warning => console.log(`  - ${warning}`));
+    if (result.warnings.length > 10) {
+      console.log(`  ... and ${result.warnings.length - 10} more warnings`);
+    }
+  }
+  
+  console.log('\n' + '='.repeat(50));
+  console.log(result.passed ? '✅ Validation PASSED' : '❌ Validation FAILED');
+  console.log('='.repeat(50) + '\n');
+}
+
+// Run validation
+if (require.main === module) {
+  validate2022Data()
+    .then(result => {
+      printResults(result);
+      process.exit(result.passed ? 0 : 1);
+    })
+    .catch(error => {
+      console.error('❌ Validation failed:', error);
+      process.exit(1);
+    });
+}
+
+export { validate2022Data };

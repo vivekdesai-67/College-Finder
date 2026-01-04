@@ -266,18 +266,7 @@ const WishlistPage = () => {
   useEffect(() => {
     const fetchWishlist = async () => {
       try {
-        const token = localStorage.getItem("token"); // ✅ read token here
-        if (!token) {
-          console.error("No token found. Please login.");
-          setLoading(false);
-          return;
-        }
-
-        const res = await fetch("/api/student/wishlist", {
-          headers: {
-            "Authorization": `Bearer ${token}`
-          }
-        });
+        const res = await fetch("/api/student/wishlist");
 
         const data = await res.json();
         if (!res.ok) throw new Error(data.error || "Failed to fetch wishlist");
@@ -294,17 +283,10 @@ const WishlistPage = () => {
   // Toggle wishlist for a college
   const handleWishlistToggle = async (college: ICollege) => {
     try {
-      const token = localStorage.getItem("token"); // ✅ read token inside function
-      if (!token) {
-        console.error("No token found. Please login.");
-        return;
-      }
-
       const res = await fetch("/api/student/wishlist", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,
         },
         body: JSON.stringify({ collegeId: college._id }),
       });

@@ -1,6 +1,7 @@
 import './globals.css';
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
+import { ClerkProvider } from '@clerk/nextjs';
 import Navbar from '@/components/Navbar';
 import { Toaster } from '@/components/ui/sonner';
 
@@ -17,14 +18,16 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
-      <body className={inter.className}>
-        <Navbar />
-        <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
-          {children}
-        </main>
-        <Toaster />
-      </body>
-    </html>
+    <ClerkProvider>
+      <html lang="en">
+        <body className={inter.className}>
+          <Navbar />
+          <main className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-blue-50">
+            {children}
+          </main>
+          <Toaster />
+        </body>
+      </html>
+    </ClerkProvider>
   );
 }

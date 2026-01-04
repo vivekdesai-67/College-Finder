@@ -23,6 +23,7 @@ interface CollegeCardProps {
   eligibilityScore?: number;
   recommendedBranch?: string;
   showActions?: boolean;
+  preferredBranches?: string[]; // Add preferred branches prop
 }
 
 export default function CollegeCard({
@@ -32,9 +33,19 @@ export default function CollegeCard({
   eligibilityScore,
   recommendedBranch,
   showActions = true,
+  preferredBranches = [], // Default to empty array
 }: CollegeCardProps) {
   const [imageError, setImageError] = useState(false);
   const router = useRouter();
+
+  // Use branches as-is from the college object (already filtered by recommendations page)
+  const branchesToShow = college.branchesOffered || [];
+  
+  console.log(`CollegeCard for ${college.name}:`, {
+    totalBranches: college.branchesOffered?.length,
+    branchesToShow: branchesToShow.length,
+    branches: branchesToShow.map((b: any) => ({ name: b.name, cutoff: b.cutoff }))
+  });
 
   // const handleWishlistClick = () => {
   //   onWishlistToggle(college._id);
@@ -302,48 +313,74 @@ export default function CollegeCard({
             `Offering ${college.branchesOffered?.length || 0} engineering branches with top-notch infrastructure, labs, and placements.`}
         </p>
 
-        {/* Branches Offered */}
-        {college.branchesOffered && college.branchesOffered.length > 0 && (
-          <div className="mt-3 grid grid-cols-1 md:grid-cols-2 gap-3 max-h-64 overflow-y-auto">
-            {college.branchesOffered.map((branch, index) => (
+        {/* Branches Offered - Only Preferred Branches */}
+        {branchesToShow && branchesToShow.length > 0 && (
+          <div className="mt-3 space-y-3">
+            <div className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+              🎓 Available Branches ({branchesToShow.length})
+            </div>
+            {branchesToShow.map((branch: any, index) => (
               <div
                 key={index}
-                className="relative flex flex-col p-3 rounded-xl border border-indigo-100 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm hover:shadow-md transition-all"
+                className="relative flex flex-col p-4 rounded-xl border border-gray-200 bg-gradient-to-r from-blue-50 to-indigo-50 shadow-sm hover:shadow-md transition-all"
               >
-                <span className="font-semibold text-gray-800 mb-1">
-                  🎓 {branch.name}
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {Object.entries(branch.cutoff).map(([category, value], i) => {
-                    const color =
-                      category.startsWith("1")
-                        ? "bg-blue-100 text-blue-800"
-                        : category.startsWith("2")
-                          ? "bg-green-100 text-green-800"
-                          : category.startsWith("3")
-                            ? "bg-purple-100 text-purple-800"
-                            : category.startsWith("G")
-                              ? "bg-pink-100 text-pink-800"
-                              : category.startsWith("N")
-                                ? "bg-yellow-100 text-yellow-800"
-                                : category.startsWith("O")
-                                  ? "bg-orange-100 text-orange-800"
-                                  : "bg-gray-100 text-gray-800";
+                {/* Branch Name */}
+                <div className="flex items-start justify-between mb-3 gap-2">
+                  <span className="font-bold text-gray-900 text-base flex-1 break-words">
+                    🎓 {branch.name || 'Unknown Branch'}
+                  </span>
+                  {branch.eligibilityScore && (
+                    <Badge className="ml-2 text-xs bg-green-100 text-green-700 border-green-200 flex-shrink-0">
+                      {Math.round(branch.eligibilityScore)}% Match
+                    </Badge>
+                  )}
+                </div>
+                
+                {/* Category Cutoffs - Only User's Category */}
+                {Object.keys(branch.cutoff).length > 0 ? (
+                  <div className="flex flex-wrap gap-2">
+                    {Object.entries(branch.cutoff)
+                      .sort(([a], [b]) => a.localeCompare(b))
+                      .map(([category, value], i) => {
+                        // Assign colors based on category prefix
+                        const color =
+                          category.startsWith("1")
+                            ? "bg-blue-100 text-blue-800 border-blue-300"
+                            : category.startsWith("2A")
+                              ? "bg-green-100 text-green-800 border-green-300"
+                              : category.startsWith("2B")
+                                ? "bg-teal-100 text-teal-800 border-teal-300"
+                                : category.startsWith("3A")
+                                  ? "bg-purple-100 text-purple-800 border-purple-300"
+                                  : category.startsWith("3B")
+                                    ? "bg-violet-100 text-violet-800 border-violet-300"
+                                    : category.startsWith("GM")
+                                      ? "bg-pink-100 text-pink-800 border-pink-300"
+                                      : category.startsWith("NRI")
+                                        ? "bg-yellow-100 text-yellow-800 border-yellow-300"
+                                        : category.startsWith("OPN") || category.startsWith("OTH")
+                                          ? "bg-orange-100 text-orange-800 border-orange-300"
+                                          : category.startsWith("SC")
+                                            ? "bg-red-100 text-red-800 border-red-300"
+                                            : category.startsWith("ST")
+                                              ? "bg-rose-100 text-rose-800 border-rose-300"
+                                              : "bg-gray-100 text-gray-800 border-gray-300";
 
-                    return (
-                      <span
-                        key={i}
-                        className={`text-xs font-medium px-2 py-0.5 rounded-full ${color}`}
-                      >
-                        {category}: {value}
-                      </span>
-                    );
-                  })}
-                </div>
-                {/* Decorative ribbon */}
-                <div className="absolute top-0 right-0 bg-indigo-500 text-white text-[10px] px-2 py-0.5 rounded-bl-md shadow">
-                  Cutoff Info
-                </div>
+                        return (
+                          <div
+                            key={i}
+                            className={`text-sm font-bold px-4 py-2 rounded-lg border-2 ${color}`}
+                          >
+                            {category}: {String(value)}
+                          </div>
+                        );
+                      })}
+                  </div>
+                ) : (
+                  <span className="text-xs text-gray-500 italic">
+                    Cutoff data not available for your category
+                  </span>
+                )}
               </div>
             ))}
           </div>

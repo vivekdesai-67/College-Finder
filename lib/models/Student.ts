@@ -89,10 +89,14 @@ import bcrypt from 'bcryptjs';
 import College from './College';
 
 export interface IStudent extends Document {
+  clerkId?: string; // Clerk user ID for syncing
   username: string;
   email: string;
-  password: string;
-  address: string;
+  password?: string; // Optional for Clerk users
+  firstName?: string;
+  lastName?: string;
+  address?: string; // Optional for Clerk users
+  phone?: string;
   rank: number | null;
   category:
     | '1G' | '1K' | '1R' | '2AG' | '2AK' | '2AR' | '2BG' | '2BK' | '2BR'
@@ -101,15 +105,19 @@ export interface IStudent extends Document {
   preferredBranch: string[]; // ✅ now array instead of single string
   wishlist: mongoose.Types.ObjectId[];
   profileComplete: boolean;
-  comparePassword(password: string): Promise<boolean>;
+  comparePassword?(password: string): Promise<boolean>;
 }
 
 const studentSchema = new mongoose.Schema<IStudent>(
   {
+    clerkId: { type: String, unique: true, sparse: true, required: true }, // Required for Clerk users
     username: { type: String, required: true, unique: true },
     email: { type: String, required: true, unique: true },
-    password: { type: String, required: true },
-    address: { type: String, required: true },
+    password: { type: String }, // Not needed for Clerk users
+    firstName: { type: String },
+    lastName: { type: String },
+    address: { type: String }, // Not needed for Clerk users
+    phone: { type: String },
     rank: { type: Number, default: null },
     category: {
       type: String,
@@ -120,22 +128,23 @@ const studentSchema = new mongoose.Schema<IStudent>(
       ],
       default: 'GM',
     },
-    preferredBranch: [{ type: String }], // ✅ array field
+    preferredBranch: [{ type: String }],
     wishlist: [{ type: mongoose.Schema.Types.ObjectId, ref: College.modelName }],
     profileComplete: { type: Boolean, default: false },
   },
   { timestamps: true }
 );
 
-// 🔒 Hash password before saving
+// 🔒 Hash password before saving (only if password exists)
 studentSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
+  if (!this.password || !this.isModified('password')) return next();
   this.password = await bcrypt.hash(this.password, 12);
   next();
 });
 
-// 🔑 Password comparison method
+// 🔑 Password comparison method (only for JWT users)
 studentSchema.methods.comparePassword = async function (password: string) {
+  if (!this.password) return false;
   return bcrypt.compare(password, this.password);
 };
 

@@ -60,8 +60,8 @@ App runs on http://localhost:3000
 Create a .env.local file in the root directory:
 
 MONGODB_URI=your_mongodb_connection_string
-JWT_SECRET=your_secret_key
-NEXTAUTH_SECRET=your_auth_secret
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
+CLERK_SECRET_KEY=your_clerk_secret_key
 NEXT_PUBLIC_API_URL=http://localhost:3000
 
 ------------------------------------------------------------

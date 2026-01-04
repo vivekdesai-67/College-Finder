@@ -72,6 +72,7 @@ import College from '@/lib/models/College';
 
 export async function GET(request: NextRequest) {
   try {
+    console.log('=== /api/colleges GET called ===');
     await connectDB();
 
     const { searchParams } = new URL(request.url);
@@ -99,9 +100,25 @@ export async function GET(request: NextRequest) {
     const sortObj: any = {};
     sortObj[sortBy] = sortOrder === 'desc' ? -1 : 1;
 
-    const colleges = await College.find(query).sort(sortObj);
-    // console.log(colleges);
-    return NextResponse.json(colleges);
+    console.log('Query:', JSON.stringify(query));
+    console.log('Sort:', JSON.stringify(sortObj));
+
+    const colleges = await College.find(query).sort(sortObj).lean();
+    
+    console.log(`MongoDB returned ${colleges.length} colleges`);
+    
+    // Check for duplicates in the result
+    const ids = colleges.map((c: any) => c._id.toString());
+    const uniqueIds = new Set(ids);
+    console.log(`Unique IDs in result: ${uniqueIds.size}`);
+    
+    // Deduplicate colleges by _id
+    const uniqueColleges = Array.from(
+      new Map(colleges.map((c: any) => [c._id.toString(), c])).values()
+    );
+    
+    console.log(`Returning ${uniqueColleges.length} unique colleges`);
+    return NextResponse.json(uniqueColleges);
   } catch (error) {
     console.error('Colleges fetch error:', error);
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 });

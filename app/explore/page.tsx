@@ -121,6 +121,7 @@ const ExplorePage = () => {
     const router = useRouter();
     const [colleges, setColleges] = useState<ICollege[]>([]);
     const [loading, setLoading] = useState(true);
+    const [expandedColleges, setExpandedColleges] = useState<Set<string>>(new Set());
 
     // Filters & search
     const [search, setSearch] = useState("");
@@ -141,7 +142,24 @@ const ExplorePage = () => {
 
             const res = await fetch(`/api/colleges?${params.toString()}`);
             const data = await res.json();
-            setColleges(data || []);
+            console.log('Fetched colleges:', data.length, 'colleges');
+            
+            // Deduplicate by _id on the frontend as well
+            const uniqueColleges = Array.from(
+                new Map(data.map((c: ICollege) => [c._id, c])).values()
+            ) as ICollege[];
+            
+            console.log('After frontend dedup:', uniqueColleges.length, 'colleges');
+            console.log('College IDs:', uniqueColleges.map((c) => c._id));
+            
+            // Check for duplicates
+            const ids = data.map((c: ICollege) => c._id);
+            const uniqueIds = new Set(ids);
+            if (ids.length !== uniqueIds.size) {
+                console.warn(`⚠️ API returned ${ids.length} colleges but only ${uniqueIds.size} unique IDs!`);
+            }
+            
+            setColleges(uniqueColleges);
         } catch (err) {
             console.error("Error fetching colleges:", err);
         } finally {
@@ -164,6 +182,18 @@ const ExplorePage = () => {
         if (sortOrder) params.append('sortOrder', sortOrder);
         
         router.push(`/recommendations?${params.toString()}`);
+    };
+
+    const toggleCollegeExpanded = (collegeId: string) => {
+        setExpandedColleges(prev => {
+            const newSet = new Set(prev);
+            if (newSet.has(collegeId)) {
+                newSet.delete(collegeId);
+            } else {
+                newSet.add(collegeId);
+            }
+            return newSet;
+        });
     };
 
     if (loading)
@@ -298,15 +328,36 @@ const ExplorePage = () => {
 
             {/* Colleges Grid */}
             {colleges.length > 0 ? (
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-                    {colleges.map((college) => (
-                        <CollegeCard
-                            key={college._id}
-                            college={college}
-                            isInWishlist={false} // Replace with actual logic if available
-                            onWishlistToggle={() => {}} // Replace with actual handler if available
-                        />
-                    ))}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-start">
+                    {colleges.map((college, index) => {
+                        const isExpanded = expandedColleges.has(college._id);
+                        
+                        // Create a modified college object with branches only if expanded
+                        const displayCollege = {
+                            ...college,
+                            branchesOffered: isExpanded ? college.branchesOffered : []
+                        };
+                        
+                        return (
+                            <div key={`${college._id}-${index}`} className="flex flex-col gap-3 h-full">
+                                <div className="flex-1">
+                                    <CollegeCard
+                                        college={displayCollege}
+                                        isInWishlist={false}
+                                        onWishlistToggle={() => {}}
+                                    />
+                                </div>
+                                {/* Toggle branches button - placed outside the card */}
+                                <Button
+                                    onClick={() => toggleCollegeExpanded(college._id)}
+                                    className="w-full bg-gradient-to-r from-purple-500 to-pink-600 text-white font-semibold shadow-lg hover:shadow-xl transition-all hover:from-purple-600 hover:to-pink-700"
+                                    size="sm"
+                                >
+                                    {isExpanded ? "🔼 Hide Branches" : `🔽 Show Branches (${college.branchesOffered?.length || 0})`}
+                                </Button>
+                            </div>
+                        );
+                    })}
                 </div>
             ) : (
                 <div className="text-center mt-10">

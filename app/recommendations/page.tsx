@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { useUser } from '@clerk/nextjs';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -86,6 +87,7 @@ const matchesPreferred = (branchName: string, preferred: string[]) => {
 
 export default function RecommendationsPage() {
   const router = useRouter();
+  const { isLoaded, isSignedIn } = useUser();
   const [colleges, setColleges] = useState<CollegeWithBoom[]>([]);
   const [loading, setLoading] = useState(false);
   const [wishlistSet, setWishlistSet] = useState<Set<string>>(new Set());
@@ -104,17 +106,14 @@ export default function RecommendationsPage() {
   const fetchRecommendations = async () => {
     setLoading(true);
     try {
-      const token = localStorage.getItem('token');
-      if (!token) {
-        toast.error('Please login to view recommendations');
-        router.push('/login');
+      if (!isSignedIn) {
+        toast.error('Please sign in to view recommendations');
+        router.push('/sign-in');
         return;
       }
 
       // First check if profile is complete
-      const profileRes = await fetch('/api/student/profile', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const profileRes = await fetch('/api/student/profile');
 
       if (!profileRes.ok) {
         setProfileComplete(false);
@@ -147,9 +146,7 @@ export default function RecommendationsPage() {
       }
 
       // Fetch personalized recommendations
-      const res = await fetch('/api/recommendations', {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res = await fetch('/api/recommendations');
 
       if (!res.ok) {
         if (res.status === 400) {
@@ -163,54 +160,85 @@ export default function RecommendationsPage() {
       
       console.log('Raw recommendations from API:', recommendations.length);
       console.log('User preferred branches:', prefArray);
-      if (recommendations.length > 0) {
-        console.log('Sample branch names from API:', recommendations.slice(0, 3).map((r: any) => r.branch?.name));
-      }
+      console.log('User category:', profile.category);
+      console.log('User rank:', profile.rank);
 
-      // Only keep recommendations whose branch matches user's preferred branches
-      if (prefArray.length > 0) {
-        const beforeFilter = recommendations.length;
-        recommendations = recommendations.filter((rec: any) => {
-          const matches = matchesPreferred(rec?.branch?.name || '', prefArray);
-          if (!matches && beforeFilter < 5) {
-            console.log('Branch not matched:', rec?.branch?.name, 'against', prefArray);
-          }
-          return matches;
-        });
-        console.log('After preferred branch filter:', recommendations.length);
-      }
-
-      // Enforce rank threshold: only show colleges where adjustedCutoff >= userRank
-      if (typeof profile.rank === 'number') {
-        recommendations = recommendations.filter((rec: any) =>
-          typeof rec.adjustedCutoff === 'number' ? profile.rank <= rec.adjustedCutoff : true
-        );
-        console.log('After rank filter:', recommendations.length);
-      }
-
-      // Process recommendations and calculate boom
-      // Recommendations already have college and branch matched
-      const selectedCategory: string | undefined = profile.category;
-      const collegesWithBoom: CollegeWithBoom[] = recommendations.map((rec: any) => {
-        const college = rec.college;
-        const recommendedBranch = rec.branch;
+      // Group recommendations by college
+      const collegeMap = new Map<string, any>();
+      
+      recommendations.forEach((rec: any) => {
+        const collegeId = rec.college._id;
         
-        // Only show the recommended branch, not all branches
-        const source = recommendedBranch?.cutoff instanceof Map 
-          ? Object.fromEntries(recommendedBranch.cutoff as any) 
-          : recommendedBranch?.cutoff || {};
-        
-        const singleCat: any = {};
-        if (selectedCategory && source[selectedCategory] != null) {
-          singleCat[selectedCategory] = source[selectedCategory];
+        if (!collegeMap.has(collegeId)) {
+          collegeMap.set(collegeId, {
+            college: rec.college,
+            branches: [],
+            maxEligibilityScore: 0,
+          });
         }
         
-        // Create array with only the recommended branch
-        const branchesForCard = [{
-          ...recommendedBranch,
-          cutoff: singleCat
-        }];
+        const collegeData = collegeMap.get(collegeId);
+        collegeData.branches.push({
+          branch: rec.branch,
+          eligibilityScore: rec.eligibilityScore,
+          adjustedCutoff: rec.adjustedCutoff,
+          boomPercent: rec.boomPercent,
+        });
         
+        // Track max eligibility score
+        if (rec.eligibilityScore > collegeData.maxEligibilityScore) {
+          collegeData.maxEligibilityScore = rec.eligibilityScore;
+        }
+      });
+      
+      const groupedRecommendations = Array.from(collegeMap.values());
+      console.log('Grouped recommendations:', groupedRecommendations.length);
+      console.log('Sample grouped recommendation:', groupedRecommendations[0]);
+
+      // Process grouped recommendations
+      const selectedCategory: string | undefined = profile.category;
+      const collegesWithBoom: CollegeWithBoom[] = groupedRecommendations
+        .map((rec: any) => {
+          const college = rec.college;
+          const matchingBranches = rec.branches || [];
+          
+          console.log(`College: ${college.name}, Matching branches: ${matchingBranches.length}`);
+          
+          // Filter branches to show user's preferred branches with ONLY user's category cutoff
+          const branchesForCard = matchingBranches.map((mb: any) => {
+            const branch = mb.branch;
+            const source = branch?.cutoff instanceof Map 
+              ? Object.fromEntries(branch.cutoff as any) 
+              : branch?.cutoff || {};
+            
+            // Only include the user's category cutoff
+            const categoryCutoff: any = {};
+            if (selectedCategory && source[selectedCategory] != null) {
+              categoryCutoff[selectedCategory] = source[selectedCategory];
+            }
+            
+            return {
+              ...branch,
+              cutoff: categoryCutoff, // Show only user's category
+              eligibilityScore: mb.eligibilityScore
+            };
+          }).filter((branch: any) => {
+            // Only include branches that have a cutoff for the user's category
+            return branch.cutoff && Object.keys(branch.cutoff).length > 0;
+          });
+          
+          console.log(`  -> Branches with user's category cutoff: ${branchesForCard.length}`);
+          if (branchesForCard.length > 0) {
+            console.log(`  -> Sample branch:`, branchesForCard[0].name, branchesForCard[0].cutoff);
+          }
+          
+          // Skip this college if no branches match
+          if (branchesForCard.length === 0) {
+            console.log(`  -> SKIPPING ${college.name} - no branches with category cutoff`);
+            return null;
+          }
+        
+        // Calculate boom for all branches in the college
         const branchesSource = college.branchesOffered || [];
         const branchesWithBoom = branchesSource.map((branch: any) => {
           // Convert ICollege branch cutoff to Branch type cutoff
@@ -299,21 +327,24 @@ export default function RecommendationsPage() {
           };
         });
 
-        // Find the recommended branch's boom
-        const recommendedBranchBoom = branchesWithBoom.find(
-          (b: any) => b.branch.name === recommendedBranch.name
-        )?.boomPercent || 0;
+        // Find the highest boom percentage among matching branches
+        const maxBoomPercent = Math.max(...matchingBranches.map((mb: any) => {
+          const branchBoom = branchesWithBoom.find((b: any) => b.branch.name === mb.branch.name);
+          return branchBoom?.boomPercent || 0;
+        }), 0); // Add 0 as fallback
 
         return {
           ...college,
-          // Pass only preferred branches and selected category cutoff for display
+          // Pass only matching branches with user's category cutoff
           branchesOffered: branchesForCard,
           branchesWithBoom,
-          recommendedBranch: recommendedBranch.name,
-          eligibilityScore: rec.eligibilityScore,
-          recommendedBoomPercent: recommendedBranchBoom,
+          eligibilityScore: rec.maxEligibilityScore,
+          maxBoomPercent,
         };
-      });
+      })
+      .filter((college): college is CollegeWithBoom => college !== null); // Remove null entries
+
+      console.log(`Final colleges with matching branches: ${collegesWithBoom.length}`);
 
       setColleges(collegesWithBoom);
     } catch (err) {
@@ -325,15 +356,19 @@ export default function RecommendationsPage() {
   };
 
   useEffect(() => {
+    if (!isLoaded) return;
+    
+    if (!isSignedIn) {
+      router.push('/sign-in');
+      return;
+    }
+
     // Auto fetch recommendations on mount
     fetchRecommendations();
 
     // Fetch wishlist
-    const token = localStorage.getItem('token');
-    if (token) {
-      fetch('/api/student/profile', {
-        headers: { Authorization: `Bearer ${token}` },
-      })
+    if (isSignedIn) {
+      fetch('/api/student/profile')
         .then((res) => res.json())
         .then((profile) => {
           if (profile.wishlist && Array.isArray(profile.wishlist)) {
@@ -357,22 +392,16 @@ export default function RecommendationsPage() {
         })
         .catch((err) => console.error('Wishlist fetch error:', err));
     }
-  }, []);
+  }, [isLoaded, isSignedIn]);
 
   const handleProfileSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please login to update profile');
-      return;
-    }
 
     try {
       const res = await fetch('/api/student/profile', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
         },
         body: JSON.stringify(profileForm),
       });
@@ -412,12 +441,6 @@ export default function RecommendationsPage() {
   };
 
   const handleWishlistToggle = async (collegeId: string) => {
-    const token = localStorage.getItem('token');
-    if (!token) {
-      toast.error('Please login to manage wishlist');
-      return;
-    }
-
     // Optimistic update
     setWishlistSet((prev) => {
       const newSet = new Set(prev);
@@ -429,7 +452,7 @@ export default function RecommendationsPage() {
     try {
       const res = await fetch('/api/student/wishlist', {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ collegeId }),
       });
       if (res.ok) {
@@ -636,10 +659,45 @@ export default function RecommendationsPage() {
 
         {profileComplete && colleges.length > 0 ? (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 items-stretch auto-rows-fr">
-            {colleges.map((college: any) => {
-              // Use the recommended branch from the recommendation API
-              const recommendedBranchBoom = college.recommendedBoomPercent;
-              const recommendedBranch = college.recommendedBranch;
+            {colleges
+              .filter(college => {
+                // STRICT filter - only show colleges with valid branch data
+                if (!college.branchesOffered) {
+                  console.log(`❌ ${college.name}: No branchesOffered property`);
+                  return false;
+                }
+                
+                if (!Array.isArray(college.branchesOffered)) {
+                  console.log(`❌ ${college.name}: branchesOffered is not an array`);
+                  return false;
+                }
+                
+                if (college.branchesOffered.length === 0) {
+                  console.log(`❌ ${college.name}: branchesOffered is empty array`);
+                  return false;
+                }
+                
+                // Check if at least one branch has cutoff data
+                const hasValidBranch = college.branchesOffered.some((b: any) => {
+                  const hasCutoff = b && b.cutoff && typeof b.cutoff === 'object' && Object.keys(b.cutoff).length > 0;
+                  return hasCutoff;
+                });
+                
+                if (!hasValidBranch) {
+                  console.log(`❌ ${college.name}: No branches with valid cutoff data`);
+                  console.log('  Branches:', college.branchesOffered.map((b: any) => ({
+                    name: b?.name,
+                    hasCutoff: !!b?.cutoff,
+                    cutoffKeys: b?.cutoff ? Object.keys(b.cutoff) : []
+                  })));
+                  return false;
+                }
+                
+                console.log(`✅ ${college.name}: Has ${college.branchesOffered.length} valid branches`);
+                return true;
+              })
+              .map((college: any) => {
+              const maxBoomPercent = college.maxBoomPercent;
 
               return (
                 <div key={college._id} className="relative h-full">
@@ -647,21 +705,19 @@ export default function RecommendationsPage() {
                   <CollegeCard
                     college={college}
                     eligibilityScore={college.eligibilityScore}
-                    recommendedBranch={recommendedBranch}
                     onWishlistToggle={() => handleWishlistToggle(college._id)}
                     isInWishlist={wishlistSet.has(college._id)}
+                    preferredBranches={preferredBranches}
                   />
                   
-                  {/* Boom Badge Overlay - shows recommended branch boom */}
-                  {recommendedBranchBoom !== undefined && (
+                  {/* Boom Badge Overlay - shows max boom among matching branches */}
+                  {maxBoomPercent !== undefined && maxBoomPercent > 0 && (
                     <div className="absolute top-2 right-2 z-10">
                       <Badge className="bg-gradient-to-r from-green-500 to-emerald-600 text-white px-3 py-1 shadow-lg">
-                        🔥 {recommendedBranchBoom}% Boom
+                        🔥 {maxBoomPercent}% Boom
                       </Badge>
                     </div>
                   )}
-
-                  {/* Branch list hidden as per requirement to not display all branches */}
                   </div>
                 </div>
               );

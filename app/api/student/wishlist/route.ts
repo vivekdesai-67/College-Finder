@@ -1,25 +1,20 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { auth } from '@clerk/nextjs/server';
 import connectDB from '@/lib/mongodb';
 import Student from '@/lib/models/Student';
-import { verifyToken, getTokenFromRequest } from '@/lib/auth';
 import College from '@/lib/models/College';
-
 
 export async function GET(request: NextRequest) {
   try {
-    const token = getTokenFromRequest(request);
-    if (!token) {
+    const authResult = await auth();
+    const clerkUserId = authResult.userId;
+    
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
-    }
-
     await connectDB();
-    const student = await Student.findById(decoded.id).populate('wishlist');
-    // console.log(student?.$assertPopulated('wishlist'));
+    const student = await Student.findOne({ clerkId: clerkUserId }).populate('wishlist');
 
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
@@ -34,14 +29,11 @@ export async function GET(request: NextRequest) {
 
 export async function POST(request: NextRequest) {
   try {
-    const token = getTokenFromRequest(request);
-    if (!token) {
+    const authResult = await auth();
+    const clerkUserId = authResult.userId;
+    
+    if (!clerkUserId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
-    }
-
-    const decoded = verifyToken(token);
-    if (!decoded) {
-      return NextResponse.json({ error: 'Invalid token' }, { status: 401 });
     }
 
     const { collegeId } = await request.json();
@@ -51,7 +43,7 @@ export async function POST(request: NextRequest) {
     }
 
     await connectDB();
-    const student = await Student.findById(decoded.id);
+    const student = await Student.findOne({ clerkId: clerkUserId });
 
     if (!student) {
       return NextResponse.json({ error: 'Student not found' }, { status: 404 });
