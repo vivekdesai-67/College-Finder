@@ -1,9 +1,11 @@
 import { NextResponse } from 'next/server';
-import { currentUser } from '@clerk/nextjs/server';
+import { currentUser, auth } from '@clerk/nextjs/server';
 
 export async function GET() {
   try {
+    // Always use currentUser() to get the most up-to-date metadata
     const user = await currentUser();
+    const { sessionClaims } = await auth();
     
     if (!user) {
       return NextResponse.json({ 
@@ -13,13 +15,16 @@ export async function GET() {
       }, { status: 401 });
     }
 
-    // Check if user has admin role in either metadata
-    const isAdmin = (user.publicMetadata as any)?.role === 'admin' || 
-                   (user.privateMetadata as any)?.role === 'admin';
-    
-    // Check if user has student role in either metadata
-    const isStudent = (user.publicMetadata as any)?.role === 'student' || 
-                     (user.privateMetadata as any)?.role === 'student';
+    // Get roles from both metadata sources for debugging
+    const userPrivateRole = (user.privateMetadata as any)?.role;
+    const userPublicRole = (user.publicMetadata as any)?.role;
+    const sessionPrivateRole = (sessionClaims?.privateMetadata as any)?.role;
+    const sessionPublicRole = (sessionClaims?.publicMetadata as any)?.role;
+
+    // Use the most reliable source (currentUser metadata)
+    const isAdmin = userPrivateRole === 'admin' || userPublicRole === 'admin';
+    const isStudent = userPrivateRole === 'student' || userPublicRole === 'student';
+    const userRole = userPrivateRole || userPublicRole;
 
     const role = isAdmin ? 'admin' : isStudent ? 'student' : 'none';
 
@@ -27,7 +32,22 @@ export async function GET() {
       isAdmin,
       isStudent,
       role,
-      userId: user.id.substring(0, 8) + '...'
+      userId: user.id.substring(0, 8) + '...',
+      // Debug info
+      userPrivateRole,
+      userPublicRole,
+      userRole,
+      hasSessionClaims: !!sessionClaims,
+      sessionClaims: {
+        privateRole: sessionPrivateRole,
+        publicRole: sessionPublicRole
+      },
+      currentUser: {
+        id: user.id.substring(0, 8) + '...',
+        publicMetadata: user.publicMetadata,
+        privateMetadata: user.privateMetadata,
+        unsafeMetadata: user.unsafeMetadata
+      }
     });
   } catch (error) {
     console.error('Role check error:', error);

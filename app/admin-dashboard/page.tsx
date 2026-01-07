@@ -24,15 +24,29 @@ export default function AdminDashboardPage() {
       }
 
       try {
+        // First check client-side role for immediate feedback
+        const clientRole = user.publicMetadata?.role;
+        console.log('Client role:', clientRole);
+
+        // Then verify with server
         const response = await fetch('/api/auth/check-role');
         const data = await response.json();
         
-        console.log('Admin check result:', data);
+        console.log('Server role check result:', data);
         
         if (data.isAdmin) {
           setIsAdmin(true);
         } else {
+          console.log('Access denied - not admin. Role data:', data);
           setIsAdmin(false);
+          // If client thinks user is admin but server disagrees, there might be a sync issue
+          if (clientRole === 'admin') {
+            console.log('Role sync issue detected - client shows admin but server disagrees');
+            // Try refreshing the page after a short delay to allow Clerk to sync
+            setTimeout(() => {
+              window.location.reload();
+            }, 2000);
+          }
         }
       } catch (error) {
         console.error('Admin check failed:', error);
