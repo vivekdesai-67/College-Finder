@@ -225,11 +225,13 @@ export default function AdminDashboardPage() {
 
   const fetchStudents = async () => {
     try {
-      const res = await fetch('/api/admin/student/profile');
+      const res = await fetch('/api/admin/students');
       const data = await res.json();
-      setStudents(data || []);
+      // Ensure data is an array
+      setStudents(Array.isArray(data) ? data : []);
     } catch {
       toast.error('Failed to fetch students');
+      setStudents([]); // Set empty array on error
     }
   };
 
@@ -486,7 +488,7 @@ export default function AdminDashboardPage() {
         </CardHeader>
         <CardContent>
           <ul className="space-y-3">
-            {students.map((s, idx) => (
+            {Array.isArray(students) && students.length > 0 ? students.map((s, idx) => (
               <li
                 key={s._id}
                 className={`flex justify-between items-center border-l-4 border-purple-300 pl-4 py-2 rounded-lg transition hover:bg-gradient-to-r ${
@@ -495,11 +497,11 @@ export default function AdminDashboardPage() {
               >
                 <div>
                   <p className="font-semibold text-purple-700">
-                    {s.username} <span className="text-gray-500">({s.email})</span>
+                    {s.username || s.email} <span className="text-gray-500">({s.email})</span>
                   </p>
                   <p className="text-sm">
                     <span className="text-blue-600 font-medium">Rank:</span> {s.rank || 'N/A'} |
-                    <span className="text-green-600 font-medium ml-2">Category:</span> {s.category}
+                    <span className="text-green-600 font-medium ml-2">Category:</span> {s.category || 'N/A'}
                   </p>
                 </div>
                 <div className="flex space-x-2">
@@ -515,7 +517,11 @@ export default function AdminDashboardPage() {
                   </Button>
                 </div>
               </li>
-            ))}
+            )) : (
+              <li className="text-center py-4 text-gray-500">
+                No students found
+              </li>
+            )}
           </ul>
         </CardContent>
       </Card>
@@ -527,7 +533,7 @@ export default function AdminDashboardPage() {
           <CardDescription className="text-purple-500">Currently added colleges</CardDescription>
         </CardHeader>
         <CardContent className="space-y-6">
-          {colleges.map((college) => (
+          {Array.isArray(colleges) && colleges.length > 0 ? colleges.map((college) => (
             <Card
               key={college._id}
               className="shadow-md rounded-xl hover:shadow-xl transition transform hover:-translate-y-1 bg-gradient-to-r from-indigo-50 via-pink-50 to-yellow-50"
@@ -539,11 +545,16 @@ export default function AdminDashboardPage() {
               <CardContent>
                 <div className="flex flex-col md:flex-row gap-6">
                   {/* College Image */}
-                  <img
-                    src={college.image}
-                    alt={college.name}
-                    className="w-full md:w-1/3 h-48 object-cover rounded-lg border-2 border-indigo-200"
-                  />
+                  {college.image && (
+                    <img
+                      src={college.image}
+                      alt={college.name}
+                      className="w-full md:w-1/3 h-48 object-cover rounded-lg border-2 border-indigo-200"
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  )}
                   {/* College Details */}
                   <div className="flex-1 space-y-2">
                     <p><span className="font-semibold text-purple-600">Location:</span> {college.location}</p>
@@ -556,9 +567,9 @@ export default function AdminDashboardPage() {
                     <div className="mt-2">
                       <p className="font-semibold text-indigo-700 mb-1">Branches Offered:</p>
                       <ul className="ml-4 space-y-2">
-                        {college.branchesOffered?.map((branch) => (
+                        {Array.isArray(college.branchesOffered) && college.branchesOffered.length > 0 ? college.branchesOffered.map((branch, branchIdx) => (
                           <li
-                            key={branch._id}
+                            key={branch._id || branchIdx}
                             className="border-l-4 border-purple-300 pl-2 pb-1 hover:bg-purple-50 rounded transition"
                           >
                             <p className="font-medium text-pink-600">{branch.name}</p>
@@ -580,14 +591,20 @@ export default function AdminDashboardPage() {
                               {branch.isBooming && <span className="text-orange-500 font-bold">Booming 🚀</span>}
                             </p>
                           </li>
-                        ))}
+                        )) : (
+                          <li className="text-gray-500">No branches available</li>
+                        )}
                       </ul>
                     </div>
                   </div>
                 </div>
               </CardContent>
             </Card>
-          ))}
+          )) : (
+            <div className="text-center py-8 text-gray-500">
+              No colleges found
+            </div>
+          )}
         </CardContent>
       </Card>
     </div>
