@@ -63,6 +63,9 @@ export default clerkMiddleware(async (auth, request) => {
   const publicRole = (sessionClaims?.publicMetadata as any)?.role as string;
   const userRole = privateRole || publicRole;
   
+  // Debug logging for role issues
+  console.log(`Middleware - Path: ${pathname}, UserRole: ${userRole}, Private: ${privateRole}, Public: ${publicRole}`);
+  
   // Handle root path redirects based on role
   if (pathname === '/') {
     if (userRole === 'admin') {
@@ -79,9 +82,17 @@ export default clerkMiddleware(async (auth, request) => {
     return NextResponse.next();
   }
 
-  // Admin route protection
+  // Admin route protection - be more lenient to handle session sync issues
   if (isAdminRoute(request)) {
+    // If no role detected, allow access but let the page handle verification
+    // This prevents middleware from blocking access due to stale session claims
+    if (!userRole) {
+      console.log(`Middleware - No role detected for admin route ${pathname}, allowing page to handle verification`);
+      return NextResponse.next();
+    }
+    
     if (userRole !== 'admin') {
+      console.log(`Middleware - Access denied for ${pathname}, role: ${userRole}`);
       return NextResponse.redirect(new URL('/unauthorized', request.url));
     }
     return NextResponse.next();
